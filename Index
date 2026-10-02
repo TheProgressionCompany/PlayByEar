@@ -140,6 +140,8 @@ button{cursor:pointer}
 .note{background:var(--surface-2);border-radius:8px;padding:4px 10px;font-weight:600;font-variant-numeric:tabular-nums}
 dl.fing{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:0}
 dl.fing dt{color:var(--muted)} dl.fing dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+.sbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:none;justify-content:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -4px 14px rgba(0,0,0,.12)}
+.sbar.on{display:flex}.sbar .btn{min-width:160px}
 .controls{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
 .play{font-size:17px;min-width:120px}
 .field{display:flex;flex-direction:column;gap:4px}
@@ -640,7 +642,7 @@ function toggleTimer(){if(T.running){clearInterval(T.id);T.running=false;persist
 
 /* ---------- views ---------- */
 function paintNav(){$("#nav").innerHTML=[["learn","Learn"],["drills","Ear drills"]].map(x=>'<button class="chip" data-act="tab" data-tab="'+x[0]+'" aria-pressed="'+(UI.tab===x[0])+'">'+x[1]+'</button>').join("");}
-function render(){
+function render(){setTimeout(sticky,50);
   paintNav();const v=$("#view");
   if(UI.tab==="drills"){v.innerHTML=drillsView();return;}
   if(UI.view==="song"&&cur())v.innerHTML=songView();else{UI.view="home";v.innerHTML=homeView()+backupPanel();}
@@ -696,7 +698,7 @@ function songView(){
   '<div class="card stack"><div id="strip"></div></div>'+
   '<div class="card"><div id="kbwrap"></div></div>'+
   '<div class="card explain" id="explain"></div>'+
-  '<div class="card controls"><div class="row"><button class="btn play" id="playbtn" data-act="play">Play</button><div class="row" role="group" aria-label="Speed">'+[0.5,0.75,1].map(x=>'<button class="chip" data-act="speed" data-n="'+x+'" aria-pressed="'+(UI.speed===x)+'">'+Math.round(x*100)+'%</button>').join("")+'</div></div>'+
+  '<div class="sbar" id="sbar"><button class="btn play" id="playbtn2" data-act="play">Play</button></div><div class="card controls"><div class="row"><button class="btn play" id="playbtn" data-act="play">Play</button><div class="row" role="group" aria-label="Speed">'+[0.5,0.75,1].map(x=>'<button class="chip" data-act="speed" data-n="'+x+'" aria-pressed="'+(UI.speed===x)+'">'+Math.round(x*100)+'%</button>').join("")+'</div></div>'+
   '<div class="row"><button class="chip" data-act="loop" aria-pressed="'+(UI.loop==="all")+'">Loop song</button><button class="chip" data-act="loopbar" aria-pressed="'+(UI.loop==="bar")+'">Loop this bar</button><button class="chip" data-act="click" aria-pressed="'+UI.click+'">Count-in and click</button>'+(isMel?'<button class="chip" data-act="melody" aria-pressed="'+UI.melody+'">Hear melody</button>':'')+'</div>'+
   feelBox+
   '<details><summary>More settings</summary><div class="row"><label class="field">Key<select id="shiftsel" data-act="shift">'+shiftOpts.join("")+'</select></label><label class="field">Feel<select id="feelsel" data-act="feel">'+feelOpts+'</select></label>'+(s.origShift!=null?'<button class="btn ghost small" data-act="orig">Original key ('+esc(keyName(s.key,s.origShift).split(" ")[0])+')</button>':'')+
@@ -729,7 +731,9 @@ function paintLive(){
    '<dl class="fing">'+(showMel?'<dt>Melody</dt><dd>'+esc(melTxt)+'</dd>':'<dt>Right hand</dt><dd>'+b.rhNames.map((n,i)=>esc(n)+' (finger '+b.fingers[i]+')').join(" · ")+'</dd>')+'<dt>Left hand</dt><dd>'+esc(b.lhName)+' (finger 5), the bass note</dd>'+(showMel?'<dt>Chord</dt><dd>'+esc(b.name)+' underneath</dd>':'<dt>Shape</dt><dd>'+invTxt+((UI.smooth||s.level===0)?"":" (hand jumps)")+'</dd>')+'</dl>'+
    (b.slash?'<p class="hint">A slash chord: play the chord on top, but put '+esc(b.bassName)+' in the bass.</p>':'');
 }
-function paintPlayBtn(){const b=$("#playbtn");if(b)b.textContent=A.playing?"Stop":"Play";}
+function paintPlayBtn(){const t=A.playing?"Stop":"Play";["#playbtn","#playbtn2"].forEach(q=>{const b=$(q);if(b)b.textContent=t;});sticky();}
+function sticky(){const b=$("#playbtn"),bar=$("#sbar");if(!bar)return;if(!b){bar.classList.remove("on");return;}const r=b.getBoundingClientRect();bar.classList.toggle("on",r.bottom<0||r.top>innerHeight);}
+addEventListener("scroll",sticky,{passive:true});addEventListener("resize",sticky);
 
 /* ---------- ear drills ---------- */
 const DRILLS=[
