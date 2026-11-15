@@ -177,6 +177,35 @@ a{color:var(--rh)}
 .barpick{display:grid;gap:6px}
 .big-score{font-family:var(--font-display);font-size:40px;font-weight:800}
 @media (prefers-reduced-motion:no-preference){.bar,.song,.opt{transition:border-color .15s,background .15s}}
+.ss-head{gap:12px}
+.ss-segs{display:flex;gap:6px}
+.ss-seg{display:block;height:8px;border-radius:99px;background:var(--surface-2)}
+.ss-seg.done{background:var(--good)}.ss-seg.now{background:var(--rh)}.ss-seg.skip{background:repeating-linear-gradient(45deg,var(--line) 0 4px,transparent 4px 8px)}
+.ss-hrow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.ss-hrow h2{margin:2px 0 0}
+.ss-timer{font-family:var(--font-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.ss-timer small{font-family:var(--font-body);font-size:14px;font-weight:500;color:var(--muted)}
+.ss-timer.dim{opacity:.45}
+.ss-total{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}.ss-total b{color:var(--ink);font-size:20px}
+.ss-tup{margin:0;padding:8px 12px;background:var(--surface-2);border-radius:10px;font-weight:600}
+.nrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}.nchip{display:flex;flex-direction:column;align-items:center;gap:4px}.nchip .note{font-size:22px;padding:8px 16px}.nchip small{color:var(--muted,#667);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.ss-plan li{display:block;padding:0}.ss-plan .ss-li>span:last-child{display:block;min-width:0}.ss-plan .ss-li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:center;justify-content:stretch;text-align:left;background:none;border:0;padding:6px;border-radius:12px;font:inherit;color:inherit;width:100%;cursor:pointer}.ss-plan .ss-li:hover{background:var(--surface-2)}.ss-btns{display:flex;gap:10px;flex-wrap:wrap}.ss-btns .btn{flex:1 1 220px}
+.ss-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ss-next{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.ss-next .btn{min-width:220px}
+.ss-paused{background:var(--lh-tint);border:1px solid var(--lh);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;font-weight:600}
+.ss-titlebar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.ss-titlebar h2{margin:2px 0 0}
+.ss-big{font-size:18px;line-height:1.55;margin:0;max-width:62ch}
+.ss-plan{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.ss-plan li{display:block}
+.ss-plan .m{background:var(--rh-tint);color:var(--ink);font-weight:800;border-radius:10px;text-align:center;padding:8px 0}
+.ss-plan b{display:block}
+.ss-row{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.note.empty{border:2px dashed var(--line);color:var(--muted)}
+.btn.big{width:100%;font-size:20px;padding:16px 22px}
+.btn[aria-pressed="true"]{outline:2px solid var(--rh);outline-offset:1px}
+@media (max-width:640px){.ss-timer{font-size:34px}.ss-next{align-items:stretch;width:100%}.ss-next .btn{width:100%}}
 </style>
 </head>
 <body>
@@ -504,16 +533,16 @@ const NEXT_TXT={I:"The home chord (I). Everything feels settled, like arriving."
 
 /* ---------- state ---------- */
 const STORE_KEY="pbe.v1";
-let P={days:{},songs:{},unlock:{},drills:{},updatedAt:0};
+let P={days:{},songs:{},unlock:{},drills:{},updatedAt:0,seen:false,sess:null,sessN:0,ear:{rung:0}};
 let EXTRA=[];
-const UI={tab:"learn",view:"home",level:0,songId:null,stage:1,bar:0,speed:0.5,loop:"all",click:true,names:true,smooth:true,shift:0,peek:false,feel:"block",melody:true,mel:null};
+const UI={mode:"welcome",tab:"learn",view:"home",level:0,songId:null,stage:1,bar:0,speed:0.5,loop:"all",click:true,names:true,smooth:true,shift:0,peek:false,feel:"block",melody:true,mel:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pad2=n=>String(n).padStart(2,"0");
 const dateKey=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
 const todayKey=()=>dateKey(new Date());
 const dayKey=off=>{const d=new Date();d.setDate(d.getDate()-off);return dateKey(d);};
-function normalize(d){return{days:(d&&d.days)||{},songs:(d&&d.songs)||{},unlock:(d&&d.unlock)||{},drills:(d&&d.drills)||{},updatedAt:(d&&d.updatedAt)||0};}
+function normalize(d){return{days:(d&&d.days)||{},songs:(d&&d.songs)||{},unlock:(d&&d.unlock)||{},drills:(d&&d.drills)||{},updatedAt:(d&&d.updatedAt)||0,seen:!!(d&&d.seen),sess:(d&&d.sess)||null,sessN:(d&&d.sessN)||0,ear:(d&&d.ear&&typeof d.ear.rung==="number")?d.ear:{rung:0}};}
 function loadLocal(){try{const r=localStorage.getItem(STORE_KEY);if(r)P=normalize(JSON.parse(r));}catch(e){}}
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(P));}catch(e){}}
 let cloudRef=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
@@ -643,14 +672,22 @@ function toggleTimer(){if(T.running){clearInterval(T.id);T.running=false;persist
 
 /* ---------- views ---------- */
 function paintNav(){$("#nav").innerHTML=[["learn","Learn"],["drills","Ear drills"]].map(x=>'<button class="chip" data-act="tab" data-tab="'+x[0]+'" aria-pressed="'+(UI.tab===x[0])+'">'+x[1]+'</button>').join("");}
+function kbScroll(){document.querySelectorAll("#view .kbscroll").forEach(sc=>{const hl=sc.querySelector(".lh,.rh");if(hl){sc.scrollLeft=Math.max(0,hl.getBoundingClientRect().left-sc.getBoundingClientRect().left+sc.scrollLeft-10);}});}
 function render(){setTimeout(sticky,50);
-  paintNav();const v=$("#view");
-  if(UI.tab==="drills"){v.innerHTML=drillsView();return;}
-  if(UI.view==="song"&&cur())v.innerHTML=songView();else{UI.view="home";v.innerHTML=homeView()+backupPanel();}
-  if(UI.view==="song")paintLive();
+  const m=UI.mode;$("#timer").hidden=m!=="browse";$("#nav").hidden=m!=="browse";const v=$("#view");
+  if(m==="browse"){
+    paintNav();const back='<button class="btn ghost small back" data-act="tostart">← Today\'s practice</button>';
+    if(UI.tab==="drills"){v.innerHTML=back+drillsView();return;}
+    if(UI.view==="song"&&cur())v.innerHTML=songView();else{UI.view="home";v.innerHTML=back+homeView()+backupPanel();}
+    if(UI.view==="song")paintLive();
+    return;
+  }
+  v.innerHTML=m==="welcome"?welcomeView():m==="basics"?basicsView(false):m==="done"?doneView():m==="session"?sessionView():startView();
+  if(m==="session"&&!S.overlay&&(S.step===2||(S.step===3&&S.sub==="a")))paintLive();
+  kbScroll();
 }
 function backupPanel(){
-  return '<details class="card" id="backup"'+(UI.bnote?" open":"")+'><summary>Backup and restore progress</summary><div class="stack" style="margin-top:12px"><p class="hint">Your progress is saved on this device. Copy a backup to keep it safe or to move it to another device, then paste it into Restore on the other one.</p>'+
+  return '<details class="card" id="backup"'+(UI.bnote||UI.bopen?" open":"")+'><summary>Backup and restore progress</summary><div class="stack" style="margin-top:12px"><p class="hint">Your progress is saved on this device. Copy a backup to keep it safe or to move it to another device, then paste it into Restore on the other one.</p>'+
    '<div class="row"><button class="btn small" data-act="bcopy">Copy backup</button></div><textarea id="bout" rows="3" readonly aria-label="Backup text" placeholder="Your backup appears here"></textarea>'+
    '<label class="field">Restore from a backup<textarea id="bin" rows="3" placeholder="Paste a backup here"></textarea></label>'+
    '<div class="row"><button class="btn ghost small" data-act="brestore" id="brbtn">Restore</button><span class="hint" id="bmsg" role="status">'+esc(UI.bnote||"")+'</span></div></div></details>';
@@ -682,7 +719,7 @@ function homeView(){
   h+='</div><div class="songs">'+sg.map(songCard).join("")+'</div>';
   return h;
 }
-function songView(){
+function songView(sess){
   const s=cur();const plan=getPlan();const ki=keyName(s.key,UI.shift);const isMel=!!s.melody;
   const stages=[[1,"1 Learn"],[2,"2 Names only"],[3,"3 From memory"]].map(x=>'<button class="chip" data-act="stage" data-n="'+x[0]+'" aria-pressed="'+(UI.stage===x[0])+'">'+x[1]+'</button>').join("");
   const shiftOpts=[];for(let i=-6;i<=6;i++)shiftOpts.push('<option value="'+i+'"'+(i===UI.shift?" selected":"")+'>'+esc(keyName(s.key,i))+(i===0?" (as written)":"")+'</option>');
@@ -693,8 +730,8 @@ function songView(){
   const links=(s.kind==="song"||s.kind==="traditional")?'<p class="hint">Hear the original: <a href="https://open.spotify.com/search/'+encodeURIComponent((s.title+" "+q).trim())+'" target="_blank" rel="noopener">Spotify</a> · <a href="https://www.youtube.com/results?search_query='+encodeURIComponent((s.title+" "+q).trim())+'" target="_blank" rel="noopener">YouTube</a></p>':"";
   const c=cleanCount(s),nd=need(s);const done=((P.songs[s.id]||{}).clean||[]).includes(todayKey());
   const feelBox=(af!=="block"||s.kind==="lesson"&&s.feel)?'<div class="feelbox"><span class="label">Feel: '+esc(FEELS[af].name)+'</span><p style="margin-top:4px">'+esc(FEELS[af].desc)+'</p></div>':'';
-  return '<button class="btn ghost small back" data-act="home">All songs</button>'+
-  '<div><h2>'+esc(s.title)+'</h2><div class="meta" style="margin-top:8px"><span class="pill">'+esc(TAGS[s.kind]||"")+'</span><span class="pill">'+esc(ki)+'</span><span class="pill">'+esc(s.meter||"4/4")+'</span><span class="pill">'+s.bpm+' bpm</span></div>'+(s.artist&&s.kind!=="song"?'<p class="hint" style="margin-top:6px">'+esc(s.artist)+'</p>':'')+links+'</div>'+
+  return (sess?'':'<button class="btn ghost small back" data-act="home">All songs</button>')+
+  '<div><h2>'+esc(s.title)+'</h2><div class="meta" style="margin-top:8px"><span class="pill">'+esc(TAGS[s.kind]||"")+'</span><span class="pill">'+esc(ki)+'</span><span class="pill">'+esc(s.meter||"4/4")+'</span><span class="pill">'+s.bpm+' bpm</span></div>'+(s.artist&&s.kind!=="song"?'<p class="hint" style="margin-top:6px">'+esc(s.artist)+'</p>':'')+(sess?'':links)+'</div>'+
   '<div class="stages" role="group" aria-label="Practice stage">'+stages+'</div>'+
   '<div class="card stack"><div id="strip"></div></div>'+
   '<div class="card"><div id="kbwrap"></div></div>'+
@@ -738,6 +775,7 @@ addEventListener("scroll",sticky,{passive:true});addEventListener("resize",stick
 
 /* ---------- ear drills ---------- */
 const DRILLS=[
+ {id:"set",name:"Today's chords",blurb:"Hear a chord from today's set and name it.",total:10},
  {id:"quality",name:"Major or minor?",blurb:"Hear one chord. Is it bright (major) or sad (minor)?",total:10},
  {id:"colour",name:"Chord colour",blurb:"Major, minor, dominant 7th or major 7th?",total:10},
  {id:"next",name:"Which chord comes next?",blurb:"Hear the home chord, then another. Which step of the scale is it?",total:10},
@@ -754,28 +792,47 @@ function chordNotes(root,q){const names=keyUsesFlats(root,minorish(q))?FLAT:SHAR
 function playV(root,q,t,dur){voice(root,q,false,null).notes.forEach(n=>tone(n,t,dur,0.9,false));tone(36+mod12(root),t,dur,0.7,true);}
 function genQ(){
   const id=D.mode;
-  if(id==="quality"){const root=rand(12),cq=pickOne(["","m"]);return{root,cq,opts:["Major","Minor"],ans:cq===""?0:1};}
+  if(id==="set"){const st=setState(),k=rand(st.chords.length),c=parseChord(st.chords[k]);return{root:c.root,cq:c.q,opts:st.chords.slice(),ans:k,help:st.help};}
+  if(id==="quality"){const root=ear().rung>=3?rand(12):0,cq=pickOne(["","m"]);return{root,cq,opts:["Major","Minor"],ans:cq===""?0:1};}
   if(id==="colour"){const root=rand(12),cq=pickOne(["","m","7","maj7"]);return{root,cq,opts:["Major","Minor","Dominant 7","Major 7"],ans:["","m","7","maj7"].indexOf(cq)};}
   if(id==="next"){const degs=[{n:"I",d:0,q:""},{n:"IV",d:5,q:""},{n:"V",d:7,q:""},{n:"vi",d:9,q:"m"}];const k=rand(4);return{tonic:rand(12),deg:degs[k],opts:degs.map(x=>x.n),ans:k};}
   if(id==="prog"){const correct=pickOne(PROGS);const opts=shuffle([correct].concat(shuffle(PROGS.filter(p=>p!==correct)).slice(0,3)));return{tonic:rand(12),prog:correct,opts:opts.map(o=>o.name),ans:opts.indexOf(correct)};}
   const tpl=pickOne(FIND[D.diff]);return{tonic:rand(12),tpl,opts:FOPT[D.diff],pick:[null,null,null],checked:false};
 }
+const RUNG=["Compare","Guess with help","Guess from memory","Any key"];
+function ear(){if(!P.ear||typeof P.ear.rung!=="number")P.ear={rung:0};return P.ear;}
+const CMP={q:""};
+function cmpCard(){
+  const v=voice(0,CMP.q,false,null),fing=fingersFor(v.notes),nm=spellChord("C",CMP.q,0).map(x=>x.name);
+  return '<div class="card stack"><span class="label">Ear training · step 1 of 4 · Compare</span><h3>Hear the difference</h3><p>Same chord, same starting note. Only one note changes. Play each one a few times and notice how the mood shifts. There is no score in this step.</p>'+
+   '<div class="row"><button class="btn" data-act="dcmp" data-q="">Hear C major</button><button class="btn" data-act="dcmp" data-q="m">Hear C minor</button><button class="btn ghost" data-act="dcmp" data-q="both">Hear both</button></div>'+
+   '<div class="notes" aria-label="Notes in the chord">'+nm.map(n=>'<span class="note">'+esc(n)+'</span>').join("")+'</div>'+
+   '<div class="kbscroll">'+kbSvg(v.notes,48,fing,{names:true})+'</div>'+
+   '<p class="hint">'+(CMP.q===""?"C major: C, E, G. Bright and settled.":"C minor: C, E flat, G. The middle note drops one key and the mood turns darker.")+'</p>'+
+   '<div class="row"><button class="btn" data-act="dgo">I can hear it. Start guessing.</button></div></div>';
+}
+function setChords(){return S.chords&&S.chords.length>=2?S.chords:["C","Am","F","G"];}
+function setState(){const e=ear(),ch=setChords(),key=ch.join(",");if(e.key!==key){e.key=key;e.n=2;e.help=true;persist();}e.n=Math.max(2,Math.min(e.n||2,ch.length));return{chords:ch.slice(0,e.n),all:ch,n:e.n,help:e.help!==false};}
+function promoText(s){const p=s.promo;if(!p)return"";if(D.mode==="set"){const n=setState().n;return({nohelp:"Strong round. The reference buttons are off for the next round.",more:"Adding a chord. The next round has "+n+" chords.",fewer:"Dropping to "+n+" chords for a bit, with references back on.",help:"References are back on. Take your time.",full:"You have the whole set. Repeat for speed, or press Next."})[p]||"";}
+  return p==="up"?"Moving up: next round is \""+RUNG[ear().rung]+"\".":p==="down"?"Dropping back to \""+RUNG[ear().rung]+"\" for a bit. That is how the ear learns.":"";}
+function refsRow(){return '<p class="hint">Need a reminder? Tap a chord to hear it again.</p><div class="row">'+D.q.opts.map(n=>'<button class="btn ghost small" data-act="dref" data-c="'+esc(n)+'">Hear '+esc(n)+'</button>').join("")+'</div>';}
 function drillPlay(){
   const c=audio();if(!c||!D.q)return;stopPlay();const q=D.q,t=c.currentTime+0.1;
-  if(D.mode==="quality"||D.mode==="colour")playV(q.root,q.cq,t,1.8);
+  if(D.mode==="quality"||D.mode==="colour"||D.mode==="set")playV(q.root,q.cq,t,1.8);
   else if(D.mode==="next"){playV(q.tonic,"",t,1.3);playV(mod12(q.tonic+q.deg.d),q.deg.q,t+1.6,1.7);}
   else if(D.mode==="prog")q.prog.degs.forEach((d,i)=>playV(mod12(q.tonic+d),q.prog.qs[i],t+i*1.5,1.4));
   else q.tpl.forEach((n,i)=>playV(mod12(q.tonic+CH[n].d),CH[n].q,t+i*1.5,1.4));
 }
 function drillStart(){const m=dmeta(D.mode);D.active=true;D.n=0;D.score=0;D.max=0;D.summary=null;D.done=false;D.ans=null;D.q=genQ();D.max=D.mode==="find"?3*m.total:m.total;render();drillPlay();}
 function drillNext(){const m=dmeta(D.mode);D.n++;if(D.n>=m.total){drillFinish();return;}D.q=genQ();D.ans=null;D.done=false;render();drillPlay();}
-function drillFinish(){const pct=Math.round(100*D.score/D.max);const r=P.drills[D.mode]||(P.drills[D.mode]={rounds:0,best:0,last:""});r.rounds++;r.best=Math.max(r.best,pct);r.last=todayKey();persist();D.active=false;D.summary={pct,score:D.score,max:D.max};render();}
-function drillAnswer(i){if(D.done||!D.active)return;D.ans=i;D.done=true;if(i===D.q.ans)D.score++;render();}
+function drillFinish(){const pct=Math.round(100*D.score/D.max);const r=P.drills[D.mode]||(P.drills[D.mode]={rounds:0,best:0,last:""});r.rounds++;r.best=Math.max(r.best,pct);r.last=todayKey();let promo="";if(D.mode==="quality"){const e=ear();if(pct>=80&&e.rung<3){e.rung++;promo="up";}else if(pct<=40&&e.rung>1){e.rung--;promo="down";}}if(D.mode==="set"){const e=ear(),st=setState();if(pct>=80){if(e.help!==false){e.help=false;promo="nohelp";}else if(st.n<st.all.length){e.n=st.n+1;promo="more";}else promo="full";}else if(pct<=40){if(st.n>2){e.n=st.n-1;promo="fewer";}else promo="help";e.help=true;}}persist();D.active=false;D.summary={pct,score:D.score,max:D.max,promo};render();}
+function drillAnswer(i){if(D.done||!D.active)return;D.ans=i;D.done=true;const ok=i===D.q.ans;if(ok)D.score++;render();
+  if(!ok&&(D.mode==="quality"||D.mode==="colour"||D.mode==="set")){const c=audio();if(c){stopPlay();const t=c.currentTime+0.1,pc=D.mode==="set"?parseChord(D.q.opts[i]):null,pq=D.mode==="set"?pc.q:D.mode==="quality"?["","m"][i]:["","m","7","maj7"][i],pr=D.mode==="set"?pc.root:D.q.root;playV(pr,pq,t,1.5);playV(D.q.root,D.q.cq,t+1.9,1.8);}}}
 function drillPick(bar,i){const q=D.q;if(q.checked)return;q.pick[bar]=q.opts[i];render();}
 function drillCheck(){const q=D.q;if(q.checked||q.pick.some(x=>x==null))return;let ok=0;q.tpl.slice(1).forEach((n,i)=>{if(q.pick[i]===n)ok++;});D.score+=ok;q.checked=true;D.done=true;render();}
 function feedbackHtml(){
   const q=D.q;let ok=D.ans===q.ans,title,body;
-  if(D.mode==="quality"||D.mode==="colour"){title=ok?"Correct":"Not quite";body='That was '+esc(chordLabel(q.root,q.cq))+' ('+esc(chordNotes(q.root,q.cq))+'). '+esc(QDESC[q.cq]);}
+  if(D.mode==="quality"||D.mode==="colour"||D.mode==="set"){title=ok?"Correct":"Not quite";body=(ok?'':'You picked '+esc(q.opts[D.ans])+'. You just heard your pick, then the real one. ')+'That was '+esc(chordLabel(q.root,q.cq))+' ('+esc(chordNotes(q.root,q.cq))+'). '+esc(QDESC[q.cq]);}
   else if(D.mode==="next"){const k=keyName("C",0);const rootName=(keyUsesFlats(q.tonic,false)?FLAT:SHARP)[q.tonic];title=ok?"Correct":"Not quite, it was "+q.deg.n;body='In the key of '+esc(rootName)+', the home chord is '+esc(chordLabel(q.tonic,""))+' and the second chord was '+esc(chordLabel(mod12(q.tonic+q.deg.d),q.deg.q))+' ('+esc(q.deg.n)+'). '+esc(NEXT_TXT[q.deg.n]);}
   else{title=ok?"Correct":"Not quite, it was "+q.prog.name;const minor=q.prog.qs[0]==="m";const chords=q.prog.degs.map((d,i)=>chordLabel(mod12(q.tonic+d),q.prog.qs[i])).join(" – ");body='In '+esc(keyName(minor?"Am":"C",mod12(q.tonic-(minor?9:0))))+': '+esc(chords)+'. You can hear this pattern in '+esc(q.prog.songs)+'.';}
   return '<div class="fb '+(ok?"ok":"no")+'"><b>'+esc(title)+'</b><p>'+body+'</p></div>';
@@ -784,10 +841,15 @@ function drillsView(){
   let h='<div><h2>Ear drills</h2><p class="hint">Listen first, then answer. Five to ten minutes fits the warm-up block. Speed comes from repetition.</p></div>';
   h+='<div class="dmodes" role="group" aria-label="Choose a drill">'+DRILLS.map(d=>{const r=P.drills[d.id];return '<button class="dmode" data-act="dmode" data-id="'+d.id+'" aria-pressed="'+(D.mode===d.id)+'"><b>'+esc(d.name)+'</b><span>'+esc(d.blurb)+'</span><span>'+(r?"Best "+r.best+"% · "+r.rounds+(r.rounds===1?" round":" rounds"):"Not tried yet")+'</span></button>';}).join("")+'</div>';
   if(!D.mode)return h+'<div class="card"><p class="hint">Pick a drill to begin. If you are new, start with Major or minor?.</p></div>';
+  return h+drillBody();
+}
+function drillBody(){
+  let h='';
   const m=dmeta(D.mode);
-  if(D.summary){const s=D.summary;const r=P.drills[D.mode];return h+'<div class="card stack"><span class="label">Round finished · '+esc(m.name)+'</span><div class="big-score">'+s.pct+'%</div><p>'+s.score+' of '+s.max+' correct'+(r&&r.best===s.pct?'. Your best yet.':'. Your best is '+(r?r.best:s.pct)+'%.')+'</p><p class="hint">'+(s.pct>=80?"Strong round. Try the next drill, or repeat this one for speed.":"Do another round. Listening gets quicker with repetition.")+'</p><div class="row"><button class="btn" data-act="dstart">Another round</button></div></div>';}
+  if(D.mode==="quality"&&!D.active&&!D.summary&&ear().rung===0)return h+cmpCard();
+  if(D.summary){const s=D.summary;const r=P.drills[D.mode];return h+'<div class="card stack"><span class="label">Round finished · '+esc(m.name)+'</span><div class="big-score">'+s.pct+'%</div><p>'+s.score+' of '+s.max+' correct'+(r&&r.best===s.pct?'. Your best yet.':'. Your best is '+(r?r.best:s.pct)+'%.')+'</p><p class="hint">'+(promoText(s)?promoText(s):s.pct>=80?"Strong round. Try the next drill, or repeat this one for speed.":"Do another round. Listening gets quicker with repetition.")+'</p><div class="row"><button class="btn" data-act="dstart">Another round</button></div></div>';}
   if(!D.active){
-    let extra="";if(D.mode==="find")extra='<div class="row" role="group" aria-label="Difficulty">'+["easy","medium","hard"].map(x=>'<button class="chip" data-act="ddiff" data-d="'+x+'" aria-pressed="'+(D.diff===x)+'">'+x[0].toUpperCase()+x.slice(1)+'</button>').join("")+'</div><p class="hint">'+{easy:"Chords I, IV, V and vi.",medium:"Adds ii and iii.",hard:"Adds the dominant 7th (V7)."}[D.diff]+'</p>';
+    let extra="";if(D.mode==="set"){const st=setState();extra='<p class="hint">Today\'s chords: '+st.chords.map(esc).join(", ")+'. Tap each one and listen before you start.</p><div class="row">'+st.chords.map(n=>'<button class="btn ghost small" data-act="dref" data-c="'+esc(n)+'">Hear '+esc(n)+'</button>').join("")+'</div>';}if(D.mode==="find")extra='<div class="row" role="group" aria-label="Difficulty">'+["easy","medium","hard"].map(x=>'<button class="chip" data-act="ddiff" data-d="'+x+'" aria-pressed="'+(D.diff===x)+'">'+x[0].toUpperCase()+x.slice(1)+'</button>').join("")+'</div><p class="hint">'+{easy:"Chords I, IV, V and vi.",medium:"Adds ii and iii.",hard:"Adds the dominant 7th (V7)."}[D.diff]+'</p>';
     return h+'<div class="card stack"><h3>'+esc(m.name)+'</h3><p>'+esc(m.blurb)+' A round is '+m.total+' question'+(m.total===1?"":"s")+'.</p>'+extra+'<div class="row"><button class="btn" data-act="dstart">Start round</button></div></div>';
   }
   const q=D.q;
@@ -801,10 +863,191 @@ function drillsView(){
     body='<div class="opts">'+q.opts.map((o,i)=>{let cls="";if(D.done){if(i===q.ans)cls=" ok";else if(i===D.ans)cls=" no";}return '<button class="opt'+cls+'" data-act="danswer" data-i="'+i+'"'+(D.done?" disabled":"")+'>'+esc(o)+'</button>';}).join("")+'</div>';
     if(D.done)body+=feedbackHtml();
   }
-  return h+'<div class="card stack"><div class="qhead"><span class="label">'+esc(m.name)+' · question '+(D.n+1)+' of '+m.total+'</span><span class="label">Score '+D.score+'</span></div><div class="qbar" aria-hidden="true"><i style="width:'+Math.round(100*D.n/m.total)+'%"></i></div>'+
-   '<div class="row"><button class="btn" data-act="dhear">Hear it again</button></div>'+body+
+  return h+'<div class="card stack"><div class="qhead"><span class="label">'+esc(m.name)+(D.mode==="quality"?' · '+esc(RUNG[ear().rung]):'')+(D.mode==="set"?' · '+setState().n+' chords':'')+' · question '+(D.n+1)+' of '+m.total+'</span><span class="label">Score '+D.score+'</span></div><div class="qbar" aria-hidden="true"><i style="width:'+Math.round(100*D.n/m.total)+'%"></i></div>'+
+   '<div class="row"><button class="btn" data-act="dhear">Hear it again</button></div>'+(D.mode==="set"&&q.help&&!D.done?refsRow():'')+(D.mode==="quality"&&ear().rung===1&&!D.done?'<p class="hint">Need a reminder? Tap a reference, then decide.</p><div class="row"><button class="btn ghost small" data-act="dref" data-q="">Reference: major</button><button class="btn ghost small" data-act="dref" data-q="m">Reference: minor</button></div>':'')+body+
    (D.done?'<div class="row"><button class="btn" data-act="dnext">'+(D.n+1>=m.total?"Finish round":"Next question")+'</button></div>':'')+
    '<div class="row"><button class="btn ghost small" data-act="dquit">Stop this round</button></div></div>';
+}
+
+/* ---------- guided session, basics and chord building ---------- */
+const SESS=[
+ {k:"ear",name:"Ear warm-up",len:300,next:"Build the chords"},
+ {k:"build",name:"Build the chords",len:300,next:"Today's song"},
+ {k:"song",name:"Today's song",len:600,next:"Review and ear-to-hands"},
+ {k:"rev",name:"Review and ear-to-hands",len:600,next:"Finish"}
+];
+const S={step:0,left:300,lefts:[300,300,600,600],status:[null,null,null,null],paused:false,overlay:false,sub:"a",b:{i:0,show:false},song:null,revSong:null,drill:"quality",chords:[],ticks:0};
+const BS={n:0,mm:"maj",heard:""};
+const stageFor=s=>Math.min(3,cleanCount(s)+1);
+const byId=id=>library().find(s=>s.id===id);
+function uniqueChords(song){const seen=[];flattenBars(song).forEach(b=>{const c=b.chord.split("/")[0];if(!seen.includes(c))seen.push(c);});return seen.slice(0,4);}
+function buildChords(song){
+  const out=uniqueChords(song).slice(0,3);const add=c=>{if(out.length<4&&!out.includes(c))out.push(c);};
+  const m=out[0]&&/^([A-G][#b]?)(m?)$/.exec(out[0]);if(m)add(m[1]+(m[2]?"":"m"));
+  ["Am","F","G","Dm","Em","C"].forEach(c=>{if(out.length<3)add(c);});
+  return out;
+}
+function todayDrill(){if(ear().rung===0)return"quality";const rot=["colour","next","prog","find"].filter(id=>!(P.drills[id]&&P.drills[id].best>=80));if(rot.length&&(P.sessN||0)%3===2)return rot[0];return"set";}
+function makePlan(){
+  const song=nextUp()||reviewList()[0]||library()[0];
+  const rv=reviewList().filter(s=>s.id!==song.id)[0]||null;
+  return{song:song.id,revSong:rv?rv.id:null,drill:todayDrill(),chords:buildChords(song)};
+}
+const sessSaved=()=>P.sess&&P.sess.day===todayKey()&&!P.sess.done?P.sess:null;
+function saveSess(done){P.sess={day:todayKey(),step:S.step,left:S.left,lefts:S.lefts.slice(),status:S.status,song:S.song,revSong:S.revSong,drill:S.drill,chords:S.chords,done:!!done};persist();}
+function setSong(id,stage){UI.songId=id;UI.view="song";UI.tab="learn";UI.stage=stage;UI.bar=0;UI.peek=false;UI.shift=0;UI.loop="all";const so=cur();UI.smooth=so.level>0;UI.feel=so.feel||"block";UI.melody=true;UI.mel=null;}
+function enterStep(i,left,idle){
+  stopPlay();S.step=i;S.left=left!=null?left:SESS[i].len;S.paused=!!idle;S.idle=!!idle;S.overlay=false;S.sub="a";
+  if(i===0){D.mode=S.drill;D.active=false;D.summary=null;}
+  if(i===1){S.b={i:0,show:true};}
+  if(i===2){setSong(S.song,stageFor(byId(S.song)));}
+  if(i===3){setSong(S.revSong||S.song,3);}
+  saveSess();render();window.scrollTo({top:0});
+}
+function sessionBegin(step,fresh){
+  if(T.running)toggleTimer();
+  const sv=sessSaved();
+  if(sv&&byId(sv.song)){
+    S.song=sv.song;S.revSong=sv.revSong;S.drill=sv.drill;S.chords=sv.chords;UI.mode="session";
+    if(fresh){S.status=[null,null,null,null];S.lefts=SESS.map(x=>x.len);enterStep(0);return;}
+    S.status=sv.status.slice();S.lefts=(sv.lefts&&sv.lefts.length===4)?sv.lefts.slice():SESS.map(x=>x.len);S.lefts[sv.step]=sv.left;
+    const k=(step==null||isNaN(step))?sv.step:step;
+    if(k===sv.step)enterStep(k,S.lefts[k]);else enterStep(k,SESS[k].len,true);return;
+  }
+  const p=makePlan();S.song=p.song;S.revSong=p.revSong;S.drill=p.drill;S.chords=p.chords;S.status=[null,null,null,null];S.lefts=SESS.map(x=>x.len);UI.mode="session";{const k0=(step==null||isNaN(step))?0:step;enterStep(k0,null,k0>0);}
+}
+function go(i,idle){S.lefts[S.step]=S.left;enterStep(i,idle?SESS[i].len:S.lefts[i],!!idle);}
+function advance(how){S.status[S.step]=how;if(S.step<3)go(S.step+1);else{S.lefts[S.step]=S.left;finishSession();}}
+function finishSession(){stopPlay();P.sessN=(P.sessN||0)+1;saveSess(true);UI.mode="done";render();window.scrollTo({top:0});paintStreak();}
+function leaveSession(){stopPlay();if(UI.mode==="session")saveSess();}
+function totalLeft(){let r=S.left;for(let j=S.step+1;j<SESS.length;j++)r+=S.lefts[j];return r;}
+function paintSess(){
+  const a=$("#stepT"),b=$("#totT"),u=$("#tup");if(!a)return;
+  a.textContent=fmt(S.left);if(b)b.textContent=fmt(totalLeft());if(u)u.hidden=!(S.left<=0);
+}
+let SL=Date.now();
+setInterval(()=>{
+  const now=Date.now(),d=Math.min(30,(now-SL)/1000);SL=now;
+  if(UI.mode!=="session"||S.paused||S.overlay)return;
+  S.left=Math.max(0,S.left-d);const k=todayKey();P.days[k]=(P.days[k]||0)+d;paintSess();
+  if(++S.ticks%10===0){saveSess();paintStreak();}
+},1000);
+
+/* basics */
+function seq(list){const c=audio();if(!c)return;stopPlay();const t0=c.currentTime+0.06;list.forEach(e=>e.m.forEach(m=>tone(m,t0+e.t,e.d,1,m<60)));}
+function chordSeq(list){const c=audio();if(!c)return;stopPlay();const t0=c.currentTime+0.06;list.forEach((x,i)=>playV(x[0],x[1],t0+i*1.5,1.4));}
+const CMAJ=[60,64,67];
+const BASICS=[
+ {t:"The keyboard repeats",x:"The keys come in groups: two black keys, then three black keys, over and over. The white key just to the left of the two black keys is always C. The C nearest the middle of your keyboard is called middle C.",rh:[60,72],f:["C","C"],cap:"Every C is the white key just left of a pair of black keys.",hear:[["Hear C",()=>seq([{m:[60],t:0,d:1.5}])],["Hear the C an octave up",()=>seq([{m:[60],t:0,d:1},{m:[72],t:1,d:1.5}])]]},
+ {t:"Half steps and whole steps",x:"The gap from one key to the very next key, black or white, is one half step. Two half steps make a whole step. Chords are built by counting these steps.",rh:[60,61,62],f:["C","½","1"],cap:"C to the black key is a half step. C to D is a whole step.",hear:[["Hear a half step",()=>seq([{m:[60],t:0,d:1},{m:[61],t:0.9,d:1.2}])],["Hear a whole step",()=>seq([{m:[60],t:0,d:1},{m:[62],t:0.9,d:1.2}])]]},
+ {t:"What a chord is",x:"A chord is three or more notes played together. The simplest kind is a triad. It has a root (the note it is named after), then every other white key above it. For C, that is C, E and G.",rh:CMAJ,f:["C","E","G"],cap:"C chord: C, E, G.",hear:[["Hear the notes one by one",()=>seq([{m:[60],t:0,d:1},{m:[64],t:0.7,d:1},{m:[67],t:1.4,d:1.4}])],["Hear them together",()=>seq([{m:CMAJ,t:0,d:2}])]]},
+ {t:"Major and minor",x:"A major chord sounds bright and settled. A minor chord sounds sadder and darker. The only difference is the middle note, which drops down one half step. Hear both and compare.",cmp:true,cap:"Major = root, then 4 half steps, then 3. Minor = root, then 3 half steps, then 4.",hear:[]},
+ {t:"Chords have numbers",x:"Songs are written with numbers so they work in any key. In the key of C, the chord built on C is I (one), on F is IV (four) and on G is V (five). Thousands of songs use mostly these three.",rh:[60,65,67],f:["I","IV","V"],cap:"The same pattern works in every key.",hear:[["Hear I, IV, V",()=>chordSeq([[0,""],[5,""],[7,""],[0,""]])]]},
+ {t:"Finger numbers and two hands",x:"Your thumb is finger 1, then 2, 3 and 4, and your little finger is 5. Both hands use the same numbers, so on the left hand the little finger (5) is the lowest note. In this app the right hand plays the chord with fingers 1, 3 and 5, and the left hand plays the root note underneath with finger 5. Later you can also play the whole chord with your left hand: 5, 3, 1 going up.",rh:CMAJ,f:["1","3","5"],lh:48,cap:"Blue: right hand chord. Orange: left hand root note, one octave lower.",hear:[["Hear it",()=>seq([{m:[48],t:0,d:2},{m:CMAJ,t:0,d:2}])],["Hear the left hand alone",()=>seq([{m:[48],t:0,d:2}])]]},
+ {t:"Progressions and the home chord",x:"A progression is the chords of a song in order, usually repeating. The I chord is home. It is the one that feels like arriving. Listening for when the music feels like it has come home is your first ear skill.",loop:true,cap:"C, F, G, C: leave home, go away, tension, come home.",hear:[["Hear the loop",()=>chordSeq([[0,""],[5,""],[7,""],[0,""]])]]}
+];
+function basicsView(inSess){
+  const n=BS.n,T0=BASICS[n],last=n===BASICS.length-1;
+  const top=inSess?'<div class="ss-paused"><span>Practice timer paused · '+fmt(S.left)+' left in this step</span><button class="btn small" data-act="bclose">Back to practice</button></div>':'<div class="row"><button class="btn ghost small" data-act="bclose">← Today\'s practice</button></div>';
+  const chips=BASICS.map((q,i)=>'<button class="chip" data-act="btopic" data-n="'+i+'" aria-pressed="'+(i===n)+'" aria-label="Lesson '+(i+1)+'">'+(i+1)+'</button>').join("");
+  let vis="",btns="";
+  if(T0.cmp){const mn=BS.mm==="min";vis='<div class="kbscroll">'+kbSvg(mn?[60,63,67]:CMAJ,null,mn?["C","E♭","G"]:["C","E","G"],{names:true})+'</div>';
+    btns='<div class="row"><button class="btn ghost" data-act="bmm" data-v="maj" aria-pressed="'+(!mn)+'">Hear C major</button><button class="btn ghost" data-act="bmm" data-v="min" aria-pressed="'+mn+'">Hear C minor</button></div>';}
+  else if(T0.loop){vis='<div class="strip"><div class="bar" style="cursor:default"><b>C</b><small>I · home</small></div><div class="bar" style="cursor:default"><b>F</b><small>IV</small></div><div class="bar" style="cursor:default"><b>G</b><small>V</small></div><div class="bar" style="cursor:default"><b>C</b><small>I · home</small></div></div>';}
+  else{vis='<div class="kbscroll">'+kbSvg(T0.rh,T0.lh!=null?T0.lh:null,T0.f,{names:true})+'</div>'+(T0.lh!=null?'<div class="legend"><span><i style="background:var(--rh)"></i>Right hand</span><span><i style="background:var(--lh)"></i>Left hand</span></div>':'');}
+  if(!T0.cmp)btns='<div class="row">'+T0.hear.map((h,i)=>'<button class="btn ghost" data-act="bhear" data-i="'+i+'">'+esc(h[0])+'</button>').join("")+'</div>';
+  return top+'<div class="ss-titlebar"><div><span class="label">Basics · '+(n+1)+' of '+BASICS.length+'</span><h2>'+esc(T0.t)+'</h2></div><div class="row" role="group" aria-label="Lessons">'+chips+'</div></div>'+
+   '<div class="card stack"><p class="ss-big">'+esc(T0.x)+'</p>'+vis+'<p class="hint">'+esc(T0.cap)+'</p>'+btns+'<p class="hint" role="status">'+esc(BS.heard)+'</p></div>'+
+   '<div class="ss-foot"><button class="btn ghost" data-act="bprev"'+(n===0?' style="visibility:hidden"':'')+'>Previous</button><button class="btn" data-act="'+(last?'bclose':'bnext')+'">'+(last?(inSess?"Back to practice":"Finish basics"):"Next")+'</button></div>';
+}
+function welcomeView(){
+  return '<div class="stack" style="padding-top:8px"><h2>Welcome to Play by Ear</h2><p class="ss-big">You do not need to know any music to start. First, take about 8 minutes to learn seven basic ideas: the keyboard, half steps, what a chord is, how major and minor sound, chord numbers, finger numbers, and how a song moves.</p></div>'+
+   '<div class="card stack"><span class="label">The basics · 7 short lessons · about 8 minutes</span><ol class="steps">'+BASICS.map(b=>'<li>'+esc(b.t)+'</li>').join("")+'</ol>'+
+   '<button class="btn big" data-act="bstart">Start the basics</button><button class="btn ghost" data-act="bskip">Skip for now</button></div>'+
+   '<p class="hint">You can come back to the basics at any time, from the start screen or during a practice step.</p>';
+}
+
+/* start and done */
+function startView(){
+  const sv=sessSaved();const dn=P.sess&&P.sess.day===todayKey()&&P.sess.done;
+  const p=sv?{song:sv.song,revSong:sv.revSong,drill:sv.drill,chords:sv.chords}:makePlan();
+  const song=byId(p.song)||library()[0],rv=p.revSong?byId(p.revSong):null;
+  const items=[[5,"Ear warm-up",dmeta(p.drill).name],[5,"Build the chords",p.chords.join(", ")],[10,"Today's song",song.title+" · Stage "+stageFor(song)],[10,"Review and ear-to-hands",(rv?rv.title+" from memory":"Today's song from memory")+", then find a loop by ear"]];
+  const label=sv?"Resume practice (step "+(sv.step+1)+" of 4)":dn?"Practise again":"Start today's practice";
+  return '<div class="card stack"><span class="label">Today · 30 minutes'+(dn?" · done":"")+'</span>'+
+   '<p class="hint">Tap any step to jump straight to it.</p><ul class="ss-plan">'+items.map((x,k)=>{const stt=sv?(sv.step===k?" · you are here":sv.status[k]==="done"?" · done":sv.status[k]==="skip"?" · skipped":""):"";return '<li><button class="ss-li" data-act="sstart" data-step="'+k+'"><span class="m">'+x[0]+'</span><span><b>'+esc(x[1])+'</b><span class="hint">'+esc(x[2])+esc(stt)+'</span></span></button></li>';}).join("")+'</ul>'+
+   '<div class="ss-btns"><button class="btn big" data-act="sstart">'+label+'</button>'+(sv?'<button class="btn ghost big" data-act="sstart" data-fresh="1">Start from the beginning</button>':'')+'</div></div>'+
+   '<div class="card ss-row"><div><b>The basics</b><div class="hint">What a chord is, how major and minor sound, and more. 7 short lessons.</div></div><button class="btn ghost" data-act="bstart">Open basics</button></div>'+
+   '<div class="row" style="justify-content:center"><button class="btn ghost small" data-act="browse">Browse songs and levels</button><button class="btn ghost small" data-act="browsebk">Backup</button></div>';
+}
+function doneView(){
+  const st=S.status;
+  return '<div class="stack" style="text-align:center;align-items:center;padding-top:12px"><h2>Practice done</h2><p class="hint">Your streak is at the top of the page. Come back tomorrow for the next steps.</p></div>'+
+   '<div class="card stack"><span class="label">Today\'s steps</span><ul class="ss-plan">'+SESS.map((x,i)=>'<li><span class="m">'+(x.len/60)+'</span><span><b>'+esc(x.name)+'</b><span class="hint">'+(st[i]==="skip"?"Skipped":st[i]==="done"?"Done":"Not done")+'</span></span></li>').join("")+'</ul>'+
+   '<button class="btn big" data-act="tostart">Back to start</button></div>';
+}
+
+/* session screens */
+function sessHeader(){
+  const i=S.step,st=SESS[i];
+  const segs=SESS.map((x,j)=>'<i class="ss-seg '+(S.status[j]==="done"?"done":S.status[j]==="skip"?"skip":j===i?"now":"")+'" style="flex:'+x.len+'"></i>').join("");
+  return '<div class="card stack ss-head"><div class="ss-segs" aria-hidden="true">'+segs+'</div>'+'<div class="row" role="group" aria-label="Jump to a step">'+SESS.map((x,j)=>'<button class="chip" data-act="sgo" data-step="'+j+'" aria-pressed="'+(j===i)+'">'+(S.status[j]==="done"?"✓ ":"")+(j+1)+" "+["Ear","Build","Song","Review"][j]+'</button>').join("")+'</div>'+
+   '<div class="ss-hrow"><div><span class="label">Step '+(i+1)+' of 4</span><h2>'+esc(st.name)+'</h2></div>'+
+   '<div class="ss-timer'+(S.paused?" dim":"")+'"><span id="stepT">'+fmt(S.left)+'</span> <small>'+(S.idle?"ready to start":S.paused?"paused":"this step")+'</small></div>'+
+   '<div class="ss-total">Session left<br><b id="totT">'+fmt(totalLeft())+'</b></div></div>'+
+   '<div class="row"><button class="'+(S.idle?"btn small":"chip")+'" data-act="spause" aria-pressed="'+(S.paused&&!S.idle)+'">'+(S.idle?"Start step":S.paused?"Resume timer":"Pause timer")+'</button><button class="chip" data-act="sbasics" aria-pressed="false">Basics</button></div>'+
+   '<p class="ss-tup" id="tup"'+(S.left<=0?"":" hidden")+'>Time is up for this step. Press Next when you are ready.</p></div>';
+}
+function sessFooter(){
+  return '<div class="ss-foot"><div class="row">'+'<button class="btn ghost small" data-act="splan">Back to today\'s plan</button>'+'<button class="btn ghost small" data-act="sskip">Skip this step</button></div><div class="ss-next"><button class="btn" data-act="snext">Next</button><span class="hint">Up next: '+esc(SESS[S.step].next)+'</span></div></div>';
+}
+function earStep(){
+  const m=dmeta(D.mode||S.drill);
+  return '<div class="card stack"><span class="label">Today\'s drill</span><h3>'+esc(m.name)+'</h3><p class="hint">'+esc(m.blurb)+' Aim for 80% or more. Finish a round, then press Next.</p></div>'+drillBody();
+}
+function formula(q){const iv=(q==="add9"?[0,4,7,14]:Q[q]).slice().sort((a,b)=>a-b);const gaps=[];for(let i=1;i<iv.length;i++)gaps.push(iv[i]-iv[i-1]);return"root, then "+gaps.map(g=>g+" half step"+(g===1?"":"s")).join(", then ");}
+const ROLES={'':["root","3rd","5th"],'m':["root","3rd","5th"],'7':["root","3rd","5th","7th"],'maj7':["root","3rd","5th","7th"],'m7':["root","3rd","5th","7th"],'sus4':["root","4th","5th"],'add9':["root","3rd","5th","9th"],'6':["root","3rd","5th","6th"],'dim':["root","3rd","5th"]};
+function buildStep(){
+  const cs=S.chords,i=Math.min(S.b.i,cs.length-1),c=parseChord(cs[i]),names=keyUsesFlats(c.root,minorish(c.q))?FLAT:SHARP;
+  const rootName=names[c.root],sp=spellChord(rootName,c.q,c.root).map(x=>x.name);
+  const v=voice(c.root,c.q,false,null),fing=fingersFor(v.notes),learn=S.b.show;
+  const label=rootName+(c.q==="maj7"?"maj7":c.q),roles=ROLES[c.q]||[];
+  const lastChord=i>=cs.length-1;
+  const head='<div class="ss-titlebar"><span class="label">Chord '+(i+1)+' of '+cs.length+'</span><span class="pill">'+esc(formula(c.q))+'</span></div>';
+  const nextBtn=lastChord?'':'<button class="btn" data-act="bnextch">Next chord</button>';
+  const lastNote=lastChord?'<p class="hint">That was the last chord for today. Press Next below.</p>':'';
+  if(!learn){
+    const boxes=sp.map(()=>'<span class="note empty">?</span>').join("");
+    return '<div class="card stack">'+head+'<h3 style="font-size:24px">Test yourself: <b>'+esc(label)+'</b></h3>'+
+     '<p>Say the notes of '+esc(label)+' out loud, find them on your keyboard and play the chord. Then press <b>Show me</b> to check.</p>'+
+     '<div class="notes" aria-label="Notes in the chord">'+boxes+'</div><div class="kbscroll" id="bkb">'+kbSvg([],null,[],{names:true})+'</div>'+
+     '<div class="row"><button class="btn ghost" data-act="bshow">Show me</button><button class="btn ghost" data-act="bchord">Hear it</button>'+nextBtn+'</div>'+lastNote+'</div>';
+  }
+  const chips=sp.map((n,k)=>'<span class="nchip"><span class="note">'+esc(n)+'</span><small>'+esc(roles[k]||"")+'</small></span>').join("");
+  const gaps=formula(c.q).replace(/^root, then /,"");
+  const how='<p>To build <b>'+esc(label)+'</b>, start on <b>'+esc(rootName)+'</b>, the root note. Then count '+esc(gaps)+'. A half step is the very next key up, black or white.</p>';
+  const bridge=(c.q===""||c.q==="m")?'<div class="fb ok"><b>Try it with your hands</b><p>'+(c.q===""?'Play this chord, then lower the middle note one key. It turns minor.':'Play this chord, then raise the middle note one key. It turns major.')+'</p><div class="row"><button class="btn ghost small" data-act="bturn">Hear the change</button></div></div>':'';
+  return '<div class="card stack">'+head+'<h3 style="font-size:24px">Build <b>'+esc(label)+'</b></h3>'+
+   '<div><span class="label">The notes</span><div class="notes nrow" aria-label="Notes in the chord">'+chips+'</div></div>'+
+   how+'<p class="hint">'+esc(QDESC[c.q]||"")+'</p>'+
+   '<div class="kbscroll" id="bkb">'+kbSvg(v.notes,48+c.root,fing,{names:true})+'</div>'+
+   '<div class="legend"><span><i style="background:var(--rh)"></i>Right hand (finger numbers)</span><span><i style="background:var(--lh)"></i>Left hand, bass note</span></div>'+
+   '<span class="label">Your turn</span><ol class="steps"><li>Press <b>Hear it</b> and listen to the chord.</li><li>Right hand: play '+sp.map((n,k)=>esc(n)+' (finger '+fing[k]+')').join(", ")+' together.</li><li>Left hand: play '+esc(rootName)+' with finger 5 as the bass note.</li><li>Hold it and say the notes out loud.</li></ol>'+
+   '<div class="row"><button class="btn" data-act="bchord">Hear it</button><button class="btn ghost" data-act="bshow">Hide it and test me</button>'+nextBtn+'</div>'+bridge+lastNote+'</div>';
+}
+function songStep(){
+  return '<p class="hint">Today\'s goal: '+(UI.stage===1?"learn the shapes and play along slowly.":UI.stage===2?"play it from the chord names, with the hands hidden.":"play it from memory, naming each chord by ear.")+' Log a clean day with the button at the bottom of the page when you have played it through twice without stopping.</p>'+songView(true);
+}
+function revStep(){
+  const rv=S.revSong?byId(S.revSong):null;
+  const tabs='<div class="stages" role="group" aria-label="Review part"><button class="chip" data-act="rsub" data-v="a" aria-pressed="'+(S.sub==="a")+'">A. From memory</button><button class="chip" data-act="rsub" data-v="b" aria-pressed="'+(S.sub==="b")+'">B. Ear to hands</button></div>';
+  if(S.sub==="b")return tabs+'<div class="card stack"><h3>Find the loop</h3><p class="hint">Hear a four-chord loop. It starts on I. Work out the other three chords and find them on your keyboard.</p></div>'+drillBody();
+  return tabs+'<p class="hint">'+(rv?"Replay "+esc(rv.title)+" from memory. Chord names are hidden.":"No song is ready for review yet, so replay today\'s song from memory. Chord names are hidden.")+'</p>'+songView(true);
+}
+function sessionView(){
+  if(S.overlay)return basicsView(true);
+  const i=S.step,body=i===0?earStep():i===1?buildStep():i===2?songStep():revStep();
+  return sessHeader()+body+sessFooter();
 }
 
 /* ---------- events ---------- */
@@ -833,12 +1076,39 @@ document.addEventListener("click",e=>{
     case"orig":UI.shift=s.origShift;render();break;
     case"bar":UI.bar=+t.dataset.i;UI.mel=null;paintLive();if(!A.playing)auditionBar(UI.bar);break;
     case"clean":{const rec=P.songs[s.id]||(P.songs[s.id]={clean:[]});const k=todayKey();const i=rec.clean.indexOf(k);if(i>=0)rec.clean.splice(i,1);else rec.clean.push(k);persist();render();break;}
+    case"sstart":sessionBegin(t.dataset.step!=null?+t.dataset.step:null,!!t.dataset.fresh);break;
+    case"sgo":{const k=+t.dataset.step;if(k!==S.step)go(k,true);break;}
+    case"snext":advance("done");break;
+    case"sskip":advance("skip");break;
+    case"splan":stopPlay();S.lefts[S.step]=S.left;saveSess();UI.mode="start";render();window.scrollTo({top:0});break;
+    case"sback":if(S.step>0)go(S.step-1,true);break;
+    case"spause":if(S.idle){S.idle=false;S.paused=false;}else S.paused=!S.paused;render();break;
+    case"sbasics":stopPlay();S.overlay=true;BS.n=0;BS.heard="";render();window.scrollTo({top:0});break;
+    case"bstart":stopPlay();BS.n=0;BS.heard="";if(UI.mode!=="session")UI.mode="basics";render();window.scrollTo({top:0});break;
+    case"bskip":P.seen=true;persist();UI.mode="start";render();break;
+    case"bclose":stopPlay();if(S.overlay&&UI.mode==="session"){S.overlay=false;}else{P.seen=true;persist();UI.mode="start";}render();window.scrollTo({top:0});break;
+    case"btopic":BS.n=+t.dataset.n;BS.heard="";render();break;
+    case"bnext":BS.n=Math.min(BASICS.length-1,BS.n+1);BS.heard="";render();window.scrollTo({top:0});break;
+    case"bprev":BS.n=Math.max(0,BS.n-1);BS.heard="";render();window.scrollTo({top:0});break;
+    case"bhear":{const h=BASICS[BS.n].hear[+t.dataset.i];h[1]();BS.heard="Playing: "+h[0];render();break;}
+    case"bmm":BS.mm=t.dataset.v;seq([{m:t.dataset.v==="maj"?CMAJ:[60,63,67],t:0,d:2}]);BS.heard="Playing C "+(t.dataset.v==="maj"?"major":"minor");render();break;
+    case"bshow":S.b.show=!S.b.show;render();break;
+    case"bchord":{const c=parseChord(S.chords[Math.min(S.b.i,S.chords.length-1)]);const cx=audio();if(cx){stopPlay();playV(c.root,c.q,cx.currentTime+0.06,2);}break;}
+    case"bnextch":S.b.i++;S.b.show=true;render();break;
+    case"rsub":S.sub=t.dataset.v;stopPlay();if(S.sub==="b"){D.mode="find";D.active=false;D.summary=null;}else setSong(S.revSong||S.song,3);render();break;
+    case"tostart":leaveSession();UI.mode="start";render();window.scrollTo({top:0});break;
+    case"browse":leaveSession();UI.mode="browse";UI.tab="learn";UI.view="home";render();window.scrollTo({top:0});break;
+    case"browsebk":leaveSession();UI.mode="browse";UI.tab="learn";UI.view="home";UI.bopen=true;render();setTimeout(()=>{const b=$("#backup");if(b)b.scrollIntoView();},50);break;
     case"bcopy":copyBackup();break;
     case"brestore":restoreBackup();break;
     case"dmode":stopPlay();D.mode=t.dataset.id;D.active=false;D.summary=null;render();break;
     case"ddiff":D.diff=t.dataset.d;render();break;
     case"dstart":drillStart();break;
     case"dhear":drillPlay();break;
+    case"dcmp":{const q=t.dataset.q,both=q==="both";if(!both)CMP.q=q;else CMP.q="m";render();const cx=audio();if(cx){stopPlay();const tt=cx.currentTime+0.1;if(both){playV(0,"",tt,1.6);playV(0,"m",tt+2,1.8);}else playV(0,q,tt,2);}break;}
+    case"dgo":ear().rung=1;persist();if(UI.mode==="session"){S.drill="set";D.mode="set";D.active=false;D.summary=null;}render();break;
+    case"dref":{const cx=audio();if(cx){stopPlay();if(t.dataset.c){const c=parseChord(t.dataset.c);playV(c.root,c.q,cx.currentTime+0.06,1.8);}else if(D.q)playV(D.q.root,t.dataset.q,cx.currentTime+0.06,1.8);}break;}
+    case"bturn":{const c=parseChord(S.chords[Math.min(S.b.i,S.chords.length-1)]),cx=audio();if(cx){stopPlay();const tt=cx.currentTime+0.1;playV(c.root,c.q,tt,1.6);playV(c.root,c.q===""?"m":"",tt+2,1.8);}break;}
     case"danswer":drillAnswer(+t.dataset.i);break;
     case"dpick":drillPick(+t.dataset.bar,+t.dataset.i);break;
     case"dcheck":drillCheck();break;
@@ -853,7 +1123,7 @@ document.addEventListener("change",e=>{
 });
 
 /* ---------- boot ---------- */
-try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}loadLocal();renderTimer();paintStreak();render();initCloud();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}loadLocal();UI.mode=P.seen?"start":"welcome";renderTimer();paintStreak();render();initCloud();
 </script>
 
 </body>
