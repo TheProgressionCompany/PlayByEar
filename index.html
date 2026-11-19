@@ -190,6 +190,7 @@ a{color:var(--rh)}
 .ss-tup{margin:0;padding:8px 12px;background:var(--surface-2);border-radius:10px;font-weight:600}
 .nrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}.nchip{display:flex;flex-direction:column;align-items:center;gap:4px}.nchip .note{font-size:22px;padding:8px 16px}.nchip small{color:var(--muted,#667);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
 .ss-plan li{display:block;padding:0}.ss-plan .ss-li>span:last-child{display:block;min-width:0}.ss-plan .ss-li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:center;justify-content:stretch;text-align:left;background:none;border:0;padding:6px;border-radius:12px;font:inherit;color:inherit;width:100%;cursor:pointer}.ss-plan .ss-li:hover{background:var(--surface-2)}.ss-btns{display:flex;gap:10px;flex-wrap:wrap}.ss-btns .btn{flex:1 1 220px}
+.ss-win{text-align:center;align-items:center;padding-top:12px}.ss-badge{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:40px;font-weight:700;background:var(--ok,#2f9e6b);color:#fff}.ss-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.ss-stat{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:12px;background:var(--surface-2,rgba(128,128,128,.12))}.ss-stat b{font-size:22px}.ss-stat span{font-size:13px;opacity:.75}
 .ss-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .ss-next{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .ss-next .btn{min-width:220px}
@@ -973,18 +974,26 @@ function startView(){
   const p=sv?{song:sv.song,revSong:sv.revSong,drill:sv.drill,chords:sv.chords}:makePlan();
   const song=byId(p.song)||library()[0],rv=p.revSong?byId(p.revSong):null;
   const items=[[5,"Ear warm-up",dmeta(p.drill).name],[5,"Build the chords",p.chords.join(", ")],[10,"Today's song",song.title+" · Stage "+stageFor(song)],[10,"Review and ear-to-hands",(rv?rv.title+" from memory":"Today's song from memory")+", then find a loop by ear"]];
-  const label=sv?"Resume practice (step "+(sv.step+1)+" of 4)":dn?"Practise again":"Start today's practice";
-  return '<div class="card stack"><span class="label">Today · 30 minutes'+(dn?" · done":"")+'</span>'+
+  const dayN=(P.sessN||0)+(dn?0:1),label=sv?"Resume Day "+dayN+" (step "+(sv.step+1)+" of 4)":dn?"Move on to Day "+(P.sessN+1):"Start Day "+dayN;
+  return '<div class="card stack"><span class="label">'+(dn?"Day "+P.sessN+" complete · next up: Day "+(P.sessN+1):"Day "+dayN)+' · 30 minutes</span>'+
    '<p class="hint">Tap any step to jump straight to it.</p><ul class="ss-plan">'+items.map((x,k)=>{const stt=sv?(sv.step===k?" · you are here":sv.status[k]==="done"?" · done":sv.status[k]==="skip"?" · skipped":""):"";return '<li><button class="ss-li" data-act="sstart" data-step="'+k+'"><span class="m">'+x[0]+'</span><span><b>'+esc(x[1])+'</b><span class="hint">'+esc(x[2])+esc(stt)+'</span></span></button></li>';}).join("")+'</ul>'+
    '<div class="ss-btns"><button class="btn big" data-act="sstart">'+label+'</button>'+(sv?'<button class="btn ghost big" data-act="sstart" data-fresh="1">Start from the beginning</button>':'')+'</div></div>'+
    '<div class="card ss-row"><div><b>The basics</b><div class="hint">What a chord is, how major and minor sound, and more. 7 short lessons.</div></div><button class="btn ghost" data-act="bstart">Open basics</button></div>'+
    '<div class="row" style="justify-content:center"><button class="btn ghost small" data-act="browse">Browse songs and levels</button><button class="btn ghost small" data-act="browsebk">Backup</button></div>';
 }
+function streakNow(){let n=0;const ok=k=>(P.days[k]||0)>=1200;let off=ok(dayKey(0))?0:1;while(ok(dayKey(off))){n++;off++;}return n;}
 function doneView(){
-  const st=S.status;
-  return '<div class="stack" style="text-align:center;align-items:center;padding-top:12px"><h2>Practice done</h2><p class="hint">Your streak is at the top of the page. Come back tomorrow for the next steps.</p></div>'+
-   '<div class="card stack"><span class="label">Today\'s steps</span><ul class="ss-plan">'+SESS.map((x,i)=>'<li><span class="m">'+(x.len/60)+'</span><span><b>'+esc(x.name)+'</b><span class="hint">'+(st[i]==="skip"?"Skipped":st[i]==="done"?"Done":"Not done")+'</span></span></li>').join("")+'</ul>'+
-   '<button class="btn big" data-act="tostart">Back to start</button></div>';
+  const st=S.status,day=P.sessN||1,mins=Math.round((P.days[todayKey()]||0)/60),sg=streakNow();
+  const so=byId(S.song),sc=(D.summary&&(D.mode===S.drill||D.mode==="set"))?D.summary.score+" of "+D.summary.max:null;
+  const stat=(n,l)=>'<div class="ss-stat"><b>'+esc(String(n))+'</b><span>'+esc(l)+'</span></div>';
+  const done=st.filter(x=>x==="done").length;
+  return '<div class="stack ss-win"><div class="ss-badge" aria-hidden="true">✓</div><h2>Day '+day+' complete</h2><p class="ss-big">Well done. You showed up and put in the work. Repeating this every day is what builds the skill.</p></div>'+
+   '<div class="card stack"><span class="label">Today in numbers</span><div class="ss-stats">'+stat(mins+" min","practised today")+stat(done+" of 4","steps completed")+stat(sg+(sg===1?" day":" days"),"streak")+(sc?stat(sc,"in the ear drill"):"")+'</div>'+
+   '<ul class="ss-plan">'+SESS.map((x,i)=>'<li><div class="ss-li" style="pointer-events:none"><span class="m">'+(x.len/60)+'</span><span><b>'+esc(x.name)+'</b><span class="hint">'+(st[i]==="skip"?"Skipped":st[i]==="done"?"Done":"Not done")+'</span></span></div></li>').join("")+'</ul>'+
+   (S.chords&&S.chords.length?'<p class="hint">Chords you built: '+S.chords.map(esc).join(", ")+(so?'. Song: '+esc(so.title)+'.':'.')+'</p>':'')+
+   (mins<20?'<p class="hint">A day counts toward your streak at 20 minutes or more.</p>':'')+'</div>'+
+   '<div class="ss-btns"><button class="btn big" data-act="sstart">Move on to Day '+(day+1)+'</button><button class="btn ghost big" data-act="tostart">Back to start</button></div>'+
+   '<p class="hint" style="text-align:center">Day '+(day+1)+' is best done tomorrow, but you can start it now if you have time.</p>';
 }
 
 /* session screens */
@@ -992,7 +1001,7 @@ function sessHeader(){
   const i=S.step,st=SESS[i];
   const segs=SESS.map((x,j)=>'<i class="ss-seg '+(S.status[j]==="done"?"done":S.status[j]==="skip"?"skip":j===i?"now":"")+'" style="flex:'+x.len+'"></i>').join("");
   return '<div class="card stack ss-head"><div class="ss-segs" aria-hidden="true">'+segs+'</div>'+'<div class="row" role="group" aria-label="Jump to a step">'+SESS.map((x,j)=>'<button class="chip" data-act="sgo" data-step="'+j+'" aria-pressed="'+(j===i)+'">'+(S.status[j]==="done"?"✓ ":"")+(j+1)+" "+["Ear","Build","Song","Review"][j]+'</button>').join("")+'</div>'+
-   '<div class="ss-hrow"><div><span class="label">Step '+(i+1)+' of 4</span><h2>'+esc(st.name)+'</h2></div>'+
+   '<div class="ss-hrow"><div><span class="label">Day '+((P.sessN||0)+1)+' · Step '+(i+1)+' of 4</span><h2>'+esc(st.name)+'</h2></div>'+
    '<div class="ss-timer'+(S.paused?" dim":"")+'"><span id="stepT">'+fmt(S.left)+'</span> <small>'+(S.idle?"ready to start":S.paused?"paused":"this step")+'</small></div>'+
    '<div class="ss-total">Session left<br><b id="totT">'+fmt(totalLeft())+'</b></div></div>'+
    '<div class="row"><button class="'+(S.idle?"btn small":"chip")+'" data-act="spause" aria-pressed="'+(S.paused&&!S.idle)+'">'+(S.idle?"Start step":S.paused?"Resume timer":"Pause timer")+'</button><button class="chip" data-act="sbasics" aria-pressed="false">Basics</button></div>'+
