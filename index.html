@@ -191,6 +191,7 @@ a{color:var(--rh)}
 .nrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}.nchip{display:flex;flex-direction:column;align-items:center;gap:4px}.nchip .note{font-size:22px;padding:8px 16px}.nchip small{color:var(--muted,#667);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
 .ss-plan li{display:block;padding:0}.ss-plan .ss-li>span:last-child{display:block;min-width:0}.ss-plan .ss-li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:center;justify-content:stretch;text-align:left;background:none;border:0;padding:6px;border-radius:12px;font:inherit;color:inherit;width:100%;cursor:pointer}.ss-plan .ss-li:hover{background:var(--surface-2)}.ss-btns{display:flex;gap:10px;flex-wrap:wrap}.ss-btns .btn{flex:1 1 220px}
 .ss-win{text-align:center;align-items:center;padding-top:12px}.ss-badge{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:40px;font-weight:700;background:var(--ok,#2f9e6b);color:#fff}.ss-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.ss-stat{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:12px;background:var(--surface-2,rgba(128,128,128,.12))}.ss-stat b{font-size:22px}.ss-stat span{font-size:13px;opacity:.75}
+.ss-chords{margin:6px 0 0;padding-left:20px;display:grid;gap:4px}.ss-titlebar .row{gap:8px}
 .ss-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .ss-next{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .ss-next .btn{min-width:220px}
@@ -534,7 +535,7 @@ const NEXT_TXT={I:"The home chord (I). Everything feels settled, like arriving."
 
 /* ---------- state ---------- */
 const STORE_KEY="pbe.v1";
-let P={days:{},songs:{},unlock:{},drills:{},updatedAt:0,seen:false,sess:null,sessN:0,ear:{rung:0}};
+let P={days:{},songs:{},unlock:{},drills:{},updatedAt:0,seen:false,sess:null,sessN:0,ear:{rung:0},dayDone:{}};
 let EXTRA=[];
 const UI={mode:"welcome",tab:"learn",view:"home",level:0,songId:null,stage:1,bar:0,speed:0.5,loop:"all",click:true,names:true,smooth:true,shift:0,peek:false,feel:"block",melody:true,mel:null};
 const $=s=>document.querySelector(s);
@@ -543,7 +544,7 @@ const pad2=n=>String(n).padStart(2,"0");
 const dateKey=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
 const todayKey=()=>dateKey(new Date());
 const dayKey=off=>{const d=new Date();d.setDate(d.getDate()-off);return dateKey(d);};
-function normalize(d){return{days:(d&&d.days)||{},songs:(d&&d.songs)||{},unlock:(d&&d.unlock)||{},drills:(d&&d.drills)||{},updatedAt:(d&&d.updatedAt)||0,seen:!!(d&&d.seen),sess:(d&&d.sess)||null,sessN:(d&&d.sessN)||0,ear:(d&&d.ear&&typeof d.ear.rung==="number")?d.ear:{rung:0}};}
+function normalize(d){return{days:(d&&d.days)||{},songs:(d&&d.songs)||{},unlock:(d&&d.unlock)||{},drills:(d&&d.drills)||{},updatedAt:(d&&d.updatedAt)||0,seen:!!(d&&d.seen),sess:(d&&d.sess)||null,sessN:(d&&d.sessN)||0,ear:(d&&d.ear&&typeof d.ear.rung==="number")?d.ear:{rung:0},dayDone:(d&&d.dayDone)||(()=>{const o={},n=(d&&d.sessN)||0;for(let i=1;i<=n;i++)o[i]="earlier";return o;})()};}
 function loadLocal(){try{const r=localStorage.getItem(STORE_KEY);if(r)P=normalize(JSON.parse(r));}catch(e){}}
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(P));}catch(e){}}
 let cloudRef=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
@@ -683,7 +684,7 @@ function render(){setTimeout(sticky,50);
     if(UI.view==="song")paintLive();
     return;
   }
-  v.innerHTML=m==="welcome"?welcomeView():m==="basics"?basicsView(false):m==="done"?doneView():m==="session"?sessionView():startView();
+  v.innerHTML=m==="welcome"?welcomeView():m==="basics"?basicsView(false):m==="done"?doneView():m==="days"?daysView():m==="session"?sessionView():startView();
   if(m==="session"&&!S.overlay&&(S.step===2||(S.step===3&&S.sub==="a")))paintLive();
   kbScroll();
 }
@@ -744,7 +745,7 @@ function songView(sess){
   '<button class="chip" data-act="smooth" aria-pressed="'+UI.smooth+'">Smooth hand moves (inversions)</button><button class="chip" data-act="names" aria-pressed="'+UI.names+'">Note names on keys</button></div><p class="hint" style="margin-top:8px">Fingerings follow the standard 1-3-5 pattern. In other keys, black keys may feel different, so keep your fingers curved and go slowly.</p></details></div>'+
   '<div class="card"><h3>'+(s.kind==="lesson"?"What you are learning":"Why this works")+'</h3><p style="margin-top:6px">'+esc(s.why)+'</p>'+((s.tips||[]).length?'<ul style="margin:8px 0 0;padding-left:20px">'+s.tips.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul>':'')+
   '<h3 style="margin-top:14px">How to practise this stage</h3><ol class="steps">'+steps.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ol></div>'+
-  '<div class="card clean"><div><h3>'+c+' of '+nd+' clean days'+(mastered(s)?' · Mastered':'')+'</h3><p class="hint">A clean day: a full play-through twice in a row, without stopping, at 100% speed'+(s.kind==="lesson"?'.':' with the chart hidden (stage 2 or 3).')+'</p></div><button class="btn'+(done?' ghost':'')+'" data-act="clean">'+(done?"Undo today":"I played it cleanly today")+'</button></div>';
+  '<div class="card clean"'+(sess?' style="display:none"':'')+'><div><h3>'+c+' of '+nd+' clean days'+(mastered(s)?' · Mastered':'')+'</h3><p class="hint">A clean day: a full play-through twice in a row, without stopping, at 100% speed'+(s.kind==="lesson"?'.':' with the chart hidden (stage 2 or 3).')+'</p></div><button class="btn'+(done?' ghost':'')+'" data-act="clean">'+(done?"Undo today":"I played it cleanly today")+'</button></div>';
 }
 function paintLive(){
   const s=cur();if(!s||UI.view!=="song"||UI.tab!=="learn")return;const plan=getPlan();if(UI.bar>=plan.length)UI.bar=0;const b=plan[UI.bar];
@@ -888,26 +889,28 @@ function buildChords(song){
   ["Am","F","G","Dm","Em","C"].forEach(c=>{if(out.length<3)add(c);});
   return out;
 }
-function todayDrill(){if(ear().rung===0)return"quality";const rot=["colour","next","prog","find"].filter(id=>!(P.drills[id]&&P.drills[id].best>=80));if(rot.length&&(P.sessN||0)%3===2)return rot[0];return"set";}
-function makePlan(){
-  const song=nextUp()||reviewList()[0]||library()[0];
-  const rv=reviewList().filter(s=>s.id!==song.id)[0]||null;
-  return{song:song.id,revSong:rv?rv.id:null,drill:todayDrill(),chords:buildChords(song)};
+const DAYS=()=>BUILTIN;
+const nextDay=()=>{const n=DAYS().length;for(let i=1;i<=n;i++)if(!P.dayDone[i])return i;return n;};
+const curDay=()=>{if(!UI.day)UI.day=nextDay();return UI.day;};
+function todayDrill(d){if(ear().rung===0)return"quality";const rot=["colour","next","prog","find"].filter(id=>!(P.drills[id]&&P.drills[id].best>=80));if(rot.length&&d%3===0)return rot[0];return"set";}
+function makePlan(d){
+  const song=DAYS()[d-1],rv=d>1?DAYS()[d-2]:null;
+  return{song:song.id,revSong:rv?rv.id:null,drill:todayDrill(d),chords:buildChords(song)};
 }
-const sessSaved=()=>P.sess&&P.sess.day===todayKey()&&!P.sess.done?P.sess:null;
-function saveSess(done){P.sess={day:todayKey(),step:S.step,left:S.left,lefts:S.lefts.slice(),status:S.status,song:S.song,revSong:S.revSong,drill:S.drill,chords:S.chords,done:!!done};persist();}
+function sessSaved(d){return P.sess&&!P.sess.done&&P.sess.dayNo===d?P.sess:null;}
+function saveSess(done){P.sess={day:todayKey(),dayNo:S.dayNo,step:S.step,left:S.left,lefts:S.lefts.slice(),status:S.status,song:S.song,revSong:S.revSong,drill:S.drill,chords:S.chords,done:!!done};persist();}
 function setSong(id,stage){UI.songId=id;UI.view="song";UI.tab="learn";UI.stage=stage;UI.bar=0;UI.peek=false;UI.shift=0;UI.loop="all";const so=cur();UI.smooth=so.level>0;UI.feel=so.feel||"block";UI.melody=true;UI.mel=null;}
 function enterStep(i,left,idle){
   stopPlay();S.step=i;S.left=left!=null?left:SESS[i].len;S.paused=!!idle;S.idle=!!idle;S.overlay=false;S.sub="a";
   if(i===0){D.mode=S.drill;D.active=false;D.summary=null;}
   if(i===1){S.b={i:0,show:true};}
-  if(i===2){setSong(S.song,stageFor(byId(S.song)));}
+  if(i===2){setSong(S.song,1);}
   if(i===3){setSong(S.revSong||S.song,3);}
   saveSess();render();window.scrollTo({top:0});
 }
 function sessionBegin(step,fresh){
   if(T.running)toggleTimer();
-  const sv=sessSaved();
+  const d=curDay(),sv=sessSaved(d);S.dayNo=d;
   if(sv&&byId(sv.song)){
     S.song=sv.song;S.revSong=sv.revSong;S.drill=sv.drill;S.chords=sv.chords;UI.mode="session";
     if(fresh){S.status=[null,null,null,null];S.lefts=SESS.map(x=>x.len);enterStep(0);return;}
@@ -915,11 +918,11 @@ function sessionBegin(step,fresh){
     const k=(step==null||isNaN(step))?sv.step:step;
     if(k===sv.step)enterStep(k,S.lefts[k]);else enterStep(k,SESS[k].len,true);return;
   }
-  const p=makePlan();S.song=p.song;S.revSong=p.revSong;S.drill=p.drill;S.chords=p.chords;S.status=[null,null,null,null];S.lefts=SESS.map(x=>x.len);UI.mode="session";{const k0=(step==null||isNaN(step))?0:step;enterStep(k0,null,k0>0);}
+  const p=makePlan(d);S.song=p.song;S.revSong=p.revSong;S.drill=p.drill;S.chords=p.chords;S.status=[null,null,null,null];S.lefts=SESS.map(x=>x.len);UI.mode="session";{const k0=(step==null||isNaN(step))?0:step;enterStep(k0,null,k0>0);}
 }
 function go(i,idle){S.lefts[S.step]=S.left;enterStep(i,idle?SESS[i].len:S.lefts[i],!!idle);}
 function advance(how){S.status[S.step]=how;if(S.step<3)go(S.step+1);else{S.lefts[S.step]=S.left;finishSession();}}
-function finishSession(){stopPlay();P.sessN=(P.sessN||0)+1;saveSess(true);UI.mode="done";render();window.scrollTo({top:0});paintStreak();}
+function finishSession(){stopPlay();P.sessN=(P.sessN||0)+1;P.dayDone[S.dayNo]=todayKey();saveSess(true);UI.mode="done";render();window.scrollTo({top:0});paintStreak();}
 function leaveSession(){stopPlay();if(UI.mode==="session")saveSess();}
 function totalLeft(){let r=S.left;for(let j=S.step+1;j<SESS.length;j++)r+=S.lefts[j];return r;}
 function paintSess(){
@@ -969,31 +972,63 @@ function welcomeView(){
 }
 
 /* start and done */
+function streakNow(){let n=0;const ok=k=>(P.days[k]||0)>=1200;let off=ok(dayKey(0))?0:1;while(ok(dayKey(off))){n++;off++;}return n;}
+function chordNotes(name){const c=parseChord(name),nm=keyUsesFlats(c.root,minorish(c.q))?FLAT:SHARP,rn=nm[c.root];return rn+(c.q==="maj7"?"maj7":c.q)+" = "+spellChord(rn,c.q,c.root).map(x=>x.name).join(" ");}
+const levelName=n=>{const l=LEVELS.find(x=>x.n===n);return l?l.name:"Level "+n;};
+function learnList(p){
+  const song=byId(p.song),rv=p.revSong?byId(p.revSong):null,ch=p.chords;
+  return [
+   ["Ear","Hear "+(p.drill==="quality"?"the difference between major and minor":p.drill==="set"?"and name today's chords: "+ch.join(", "):dmeta(p.drill).name.toLowerCase())],
+   ["Build","Spell and play "+ch.join(", ")+" from their notes"],
+   ["Song","Play “"+song.title+"”"+(song.kind==="lesson"?"":" at "+song.bpm+" bpm")],
+   ["Review",rv?"Replay “"+rv.title+"” from memory":"Replay today's song from memory, then find a loop by ear"]];
+}
+function dayCard(d,sv,dn){
+  const song=DAYS()[d-1],p=sv?{song:sv.song,revSong:sv.revSong,drill:sv.drill,chords:sv.chords}:makePlan(d),L=learnList(p);
+  const stt=k=>sv?(sv.step===k?" · you are here":sv.status[k]==="done"?" · done":sv.status[k]==="skip"?" · skipped":""):"";
+  const rows=[[5,"Ear warm-up",L[0][1]],[5,"Build the chords",L[1][1]],[10,"Today's song",L[2][1]],[10,"Review and ear-to-hands",L[3][1]]];
+  return '<div class="card stack"><div class="ss-titlebar"><span class="label">Day '+d+' of '+DAYS().length+' · '+esc(levelName(song.level))+(dn?' · done ✓':'')+'</span><span class="row">'+(d>1?'<button class="btn ghost small" data-act="pday" data-d="'+(d-1)+'">\u2190 Day '+(d-1)+'</button>':'')+(d<DAYS().length?'<button class="btn ghost small" data-act="pday" data-d="'+(d+1)+'">Day '+(d+1)+' \u2192</button>':'')+'</span></div>'+
+   '<h2 style="margin:0">'+esc(song.title)+'</h2>'+
+   '<div><span class="label">What you will learn today</span><p class="ss-big" style="margin-top:6px">'+esc(song.why)+'</p></div>'+
+   '<div><span class="label">Chords today</span><ul class="ss-chords">'+p.chords.map(c=>'<li>'+esc(chordNotes(c))+'</li>').join("")+'</ul></div>'+
+   '<span class="label">Today\'s steps · 30 minutes</span><p class="hint">Tap a step to jump straight to it.</p><ul class="ss-plan">'+rows.map((x,k)=>'<li><button class="ss-li" data-act="sstart" data-step="'+k+'"><span class="m">'+x[0]+'</span><span><b>'+esc(x[1])+'</b><span class="hint">'+esc(x[2])+esc(stt(k))+'</span></span></button></li>').join("")+'</ul>'+
+   '<div class="ss-btns"><button class="btn big" data-act="sstart">'+(sv?'Resume Day '+d+' (step '+(sv.step+1)+' of 4)':dn?'Practise Day '+d+' again':'Start Day '+d)+'</button>'+(sv?'<button class="btn ghost big" data-act="sstart" data-fresh="1">Start from the beginning</button>':'')+'</div>'+
+   '<button class="btn ghost" data-act="days">Choose another day</button></div>';
+}
 function startView(){
-  const sv=sessSaved();const dn=P.sess&&P.sess.day===todayKey()&&P.sess.done;
-  const p=sv?{song:sv.song,revSong:sv.revSong,drill:sv.drill,chords:sv.chords}:makePlan();
-  const song=byId(p.song)||library()[0],rv=p.revSong?byId(p.revSong):null;
-  const items=[[5,"Ear warm-up",dmeta(p.drill).name],[5,"Build the chords",p.chords.join(", ")],[10,"Today's song",song.title+" · Stage "+stageFor(song)],[10,"Review and ear-to-hands",(rv?rv.title+" from memory":"Today's song from memory")+", then find a loop by ear"]];
-  const dayN=(P.sessN||0)+(dn?0:1),label=sv?"Resume Day "+dayN+" (step "+(sv.step+1)+" of 4)":dn?"Move on to Day "+(P.sessN+1):"Start Day "+dayN;
-  return '<div class="card stack"><span class="label">'+(dn?"Day "+P.sessN+" complete · next up: Day "+(P.sessN+1):"Day "+dayN)+' · 30 minutes</span>'+
-   '<p class="hint">Tap any step to jump straight to it.</p><ul class="ss-plan">'+items.map((x,k)=>{const stt=sv?(sv.step===k?" · you are here":sv.status[k]==="done"?" · done":sv.status[k]==="skip"?" · skipped":""):"";return '<li><button class="ss-li" data-act="sstart" data-step="'+k+'"><span class="m">'+x[0]+'</span><span><b>'+esc(x[1])+'</b><span class="hint">'+esc(x[2])+esc(stt)+'</span></span></button></li>';}).join("")+'</ul>'+
-   '<div class="ss-btns"><button class="btn big" data-act="sstart">'+label+'</button>'+(sv?'<button class="btn ghost big" data-act="sstart" data-fresh="1">Start from the beginning</button>':'')+'</div></div>'+
+  const d=curDay(),sv=sessSaved(d),dn=!!P.dayDone[d];
+  return dayCard(d,sv,dn)+
    '<div class="card ss-row"><div><b>The basics</b><div class="hint">What a chord is, how major and minor sound, and more. 7 short lessons.</div></div><button class="btn ghost" data-act="bstart">Open basics</button></div>'+
    '<div class="row" style="justify-content:center"><button class="btn ghost small" data-act="browse">Browse songs and levels</button><button class="btn ghost small" data-act="browsebk">Backup</button></div>';
 }
-function streakNow(){let n=0;const ok=k=>(P.days[k]||0)>=1200;let off=ok(dayKey(0))?0:1;while(ok(dayKey(off))){n++;off++;}return n;}
+function daysView(){
+  const nx=nextDay(),cur=curDay();let h='<button class="btn ghost small back" data-act="tostart">← Back to Day '+cur+'</button><div class="stack"><h2 style="margin:0">All days</h2><p class="hint">Tap any day to practise it. Go back as often as you like. A tick means you finished that day.</p></div>';
+  let lv=-1;
+  DAYS().forEach((so,i)=>{const d=i+1;
+    if(so.level!==lv){if(lv>=0)h+='</ul></div>';lv=so.level;h+='<div class="card stack"><span class="label">'+esc(levelName(lv))+'</span><ul class="ss-plan">';}
+    const st=P.dayDone[d]?"✓ Done":d===nx?"Up next":"";
+    h+='<li><button class="ss-li" data-act="pickday" data-d="'+d+'"><span class="m">'+d+'</span><span><b>'+esc(so.title)+'</b><span class="hint">'+(d===cur?"Selected":st)+'</span></span></button></li>';});
+  return h+'</ul></div>';
+}
 function doneView(){
-  const st=S.status,day=P.sessN||1,mins=Math.round((P.days[todayKey()]||0)/60),sg=streakNow();
-  const so=byId(S.song),sc=(D.summary&&(D.mode===S.drill||D.mode==="set"))?D.summary.score+" of "+D.summary.max:null;
+  const st=S.status,day=S.dayNo||1,mins=Math.round((P.days[todayKey()]||0)/60),sg=streakNow(),song=byId(S.song);
+  const p={song:S.song,revSong:S.revSong,drill:S.drill,chords:S.chords||[]},rv=p.revSong?byId(p.revSong):null,done=st.filter(x=>x==="done").length;
+  const sc=(D.summary&&(D.mode===S.drill||D.mode==="set"))?D.summary.score+" of "+D.summary.max:null;
   const stat=(n,l)=>'<div class="ss-stat"><b>'+esc(String(n))+'</b><span>'+esc(l)+'</span></div>';
-  const done=st.filter(x=>x==="done").length;
-  return '<div class="stack ss-win"><div class="ss-badge" aria-hidden="true">✓</div><h2>Day '+day+' complete</h2><p class="ss-big">Well done. You showed up and put in the work. Repeating this every day is what builds the skill.</p></div>'+
+  const did=[
+   st[0]==="done"?"You trained your ear on "+(p.drill==="quality"?"major and minor":p.drill==="set"?p.chords.join(", "):dmeta(p.drill).name.toLowerCase())+(sc?" and scored "+sc+".":"."):null,
+   st[1]==="done"?"You built "+p.chords.join(", ")+" from their notes.":null,
+   st[2]==="done"?"You practised “"+song.title+"”.":null,
+   st[3]==="done"?(rv?"You replayed “"+rv.title+"” from memory.":"You replayed today's song from memory."):null].filter(Boolean);
+  const last=day>=DAYS().length;
+  return '<div class="stack ss-win"><div class="ss-badge" aria-hidden="true">✓</div><h2>Day '+day+' complete</h2><p class="ss-big">Well done. You showed up and put in the work.</p></div>'+
+   '<div class="card stack"><span class="label">What you learnt today</span><p class="ss-big">'+esc(song.why)+'</p>'+
+   (did.length?'<ul class="ss-chords">'+did.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p class="hint">You skipped every step today.</p>')+
+   '<span class="label">Chords you can now build</span><ul class="ss-chords">'+p.chords.map(c=>'<li>'+esc(chordNotes(c))+'</li>').join("")+'</ul></div>'+
    '<div class="card stack"><span class="label">Today in numbers</span><div class="ss-stats">'+stat(mins+" min","practised today")+stat(done+" of 4","steps completed")+stat(sg+(sg===1?" day":" days"),"streak")+(sc?stat(sc,"in the ear drill"):"")+'</div>'+
-   '<ul class="ss-plan">'+SESS.map((x,i)=>'<li><div class="ss-li" style="pointer-events:none"><span class="m">'+(x.len/60)+'</span><span><b>'+esc(x.name)+'</b><span class="hint">'+(st[i]==="skip"?"Skipped":st[i]==="done"?"Done":"Not done")+'</span></span></div></li>').join("")+'</ul>'+
-   (S.chords&&S.chords.length?'<p class="hint">Chords you built: '+S.chords.map(esc).join(", ")+(so?'. Song: '+esc(so.title)+'.':'.')+'</p>':'')+
    (mins<20?'<p class="hint">A day counts toward your streak at 20 minutes or more.</p>':'')+'</div>'+
-   '<div class="ss-btns"><button class="btn big" data-act="sstart">Move on to Day '+(day+1)+'</button><button class="btn ghost big" data-act="tostart">Back to start</button></div>'+
-   '<p class="hint" style="text-align:center">Day '+(day+1)+' is best done tomorrow, but you can start it now if you have time.</p>';
+   '<div class="ss-btns">'+(last?'<button class="btn big" data-act="tostart">Back to start</button>':'<button class="btn big" data-act="nextday">Move on to Day '+(day+1)+'</button>')+'<button class="btn ghost big" data-act="days">Choose another day</button></div>'+
+   (last?'':'<p class="hint" style="text-align:center">Day '+(day+1)+' is best done tomorrow, but you can start it now if you have time.</p>');
 }
 
 /* session screens */
@@ -1001,7 +1036,7 @@ function sessHeader(){
   const i=S.step,st=SESS[i];
   const segs=SESS.map((x,j)=>'<i class="ss-seg '+(S.status[j]==="done"?"done":S.status[j]==="skip"?"skip":j===i?"now":"")+'" style="flex:'+x.len+'"></i>').join("");
   return '<div class="card stack ss-head"><div class="ss-segs" aria-hidden="true">'+segs+'</div>'+'<div class="row" role="group" aria-label="Jump to a step">'+SESS.map((x,j)=>'<button class="chip" data-act="sgo" data-step="'+j+'" aria-pressed="'+(j===i)+'">'+(S.status[j]==="done"?"✓ ":"")+(j+1)+" "+["Ear","Build","Song","Review"][j]+'</button>').join("")+'</div>'+
-   '<div class="ss-hrow"><div><span class="label">Day '+((P.sessN||0)+1)+' · Step '+(i+1)+' of 4</span><h2>'+esc(st.name)+'</h2></div>'+
+   '<div class="ss-hrow"><div><span class="label">Day '+(S.dayNo||1)+' · Step '+(i+1)+' of 4</span><h2>'+esc(st.name)+'</h2></div>'+
    '<div class="ss-timer'+(S.paused?" dim":"")+'"><span id="stepT">'+fmt(S.left)+'</span> <small>'+(S.idle?"ready to start":S.paused?"paused":"this step")+'</small></div>'+
    '<div class="ss-total">Session left<br><b id="totT">'+fmt(totalLeft())+'</b></div></div>'+
    '<div class="row"><button class="'+(S.idle?"btn small":"chip")+'" data-act="spause" aria-pressed="'+(S.paused&&!S.idle)+'">'+(S.idle?"Start step":S.paused?"Resume timer":"Pause timer")+'</button><button class="chip" data-act="sbasics" aria-pressed="false">Basics</button></div>'+
@@ -1045,7 +1080,7 @@ function buildStep(){
    '<div class="row"><button class="btn" data-act="bchord">Hear it</button><button class="btn ghost" data-act="bshow">Hide it and test me</button>'+nextBtn+'</div>'+bridge+lastNote+'</div>';
 }
 function songStep(){
-  return '<p class="hint">Today\'s goal: '+(UI.stage===1?"learn the shapes and play along slowly.":UI.stage===2?"play it from the chord names, with the hands hidden.":"play it from memory, naming each chord by ear.")+' Log a clean day with the button at the bottom of the page when you have played it through twice without stopping.</p>'+songView(true);
+  return '<p class="hint">Today\'s goal: '+(UI.stage===1?"learn the shapes and play along slowly.":UI.stage===2?"play it from the chord names, with the hands hidden.":"play it from memory, naming each chord by ear.")+' Repeat it until it feels easy.</p>'+songView(true);
 }
 function revStep(){
   const rv=S.revSong?byId(S.revSong):null;
@@ -1089,6 +1124,10 @@ document.addEventListener("click",e=>{
     case"sgo":{const k=+t.dataset.step;if(k!==S.step)go(k,true);break;}
     case"snext":advance("done");break;
     case"sskip":advance("skip");break;
+    case"pday":{const d=+t.dataset.d;if(d>=1&&d<=DAYS().length){UI.day=d;render();window.scrollTo({top:0});}break;}
+    case"pickday":UI.day=+t.dataset.d;UI.mode="start";render();window.scrollTo({top:0});break;
+    case"days":leaveSession();UI.mode="days";render();window.scrollTo({top:0});break;
+    case"nextday":UI.day=Math.min(DAYS().length,(S.dayNo||1)+1);UI.mode="start";render();window.scrollTo({top:0});break;
     case"splan":stopPlay();S.lefts[S.step]=S.left;saveSess();UI.mode="start";render();window.scrollTo({top:0});break;
     case"sback":if(S.step>0)go(S.step-1,true);break;
     case"spause":if(S.idle){S.idle=false;S.paused=false;}else S.paused=!S.paused;render();break;
