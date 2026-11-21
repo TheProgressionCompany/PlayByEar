@@ -1017,11 +1017,12 @@ function startView(){
    '<div class="card ss-row"><div><b>The basics</b><div class="hint">What a chord is, how major and minor sound, and more. 7 short lessons.</div></div><button class="btn ghost" data-act="bstart">Open basics</button></div>'+
    '<div class="row" style="justify-content:center"><button class="btn ghost small" data-act="browse">Browse songs and levels</button><button class="btn ghost small" data-act="browsebk">Backup</button></div>';
 }
+const DLV={"aint-no-sunshine":1,"minor-descent":2,"l2-c7":2,"l3-m7":3};
 function daysView(){
   const nx=nextDay(),cur=curDay();let h='<button class="btn ghost small back" data-act="tostart">← Back to Day '+cur+'</button><div class="stack"><h2 style="margin:0">All days</h2><p class="hint">Tap any day to practise it. Go back as often as you like. A tick means you finished that day.</p></div>';
   let lv=-1;
-  DAYS().forEach((so,i)=>{const d=i+1;
-    if(so.level!==lv){if(lv>=0)h+='</ul></div>';lv=so.level;h+='<div class="card stack"><span class="label">'+esc(levelName(lv))+'</span><ul class="ss-plan">';}
+  DAYS().forEach((so,i)=>{const d=i+1,L=DLV[so.id]!=null?DLV[so.id]:so.level;
+    if(L!==lv){if(lv>=0)h+='</ul></div>';lv=L;h+='<div class="card stack"><span class="label">Level '+lv+' · '+esc(levelName(lv))+'</span><ul class="ss-plan">';}
     const st=dayIsDone(d)?"✓ Done":d===nx?"Up next":"";
     h+='<li><button class="ss-li" data-act="pickday" data-d="'+d+'"><span class="m">'+d+'</span><span><b>'+esc(so.title)+'</b><span class="hint">'+(d===cur?"Selected":st)+'</span></span></button></li>';});
   return h+'</ul></div>';
