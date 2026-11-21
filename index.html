@@ -498,8 +498,20 @@ const BUILTIN=[
   sections:[{name:"Tune",bars:["C","F","C","C","G7","C","G7","C","C","F","C","C"]}],
   melody:["C4:1 C4:1 G4:1 G4:1","A4:1 A4:1 G4:2","F4:1 F4:1 E4:1 E4:1","D4:1 D4:1 C4:2","G4:1 G4:1 F4:1 F4:1","E4:1 E4:1 D4:2","G4:1 G4:1 F4:1 F4:1","E4:1 E4:1 D4:2","C4:1 C4:1 G4:1 G4:1","A4:1 A4:1 G4:2","F4:1 F4:1 E4:1 E4:1","D4:1 D4:1 C4:2"],
   why:"Six notes this time. The A sits one key above your finger 5, so slide your hand up a little when you reach it.",
-  tips:["Play bar 2 alone until sliding the hand up to A and back to G feels easy."]}
+  tips:["Play bar 2 alone until sliding the hand up to A and back to G feels easy."]},
+ {id:"l0-four",level:0,kind:"lesson",title:"Four chords: C, Am, F and G",key:"C",bpm:70,meter:"4/4",sections:[{name:"The loop",bars:["C","Am","F","G"]}],
+  why:"Put your chords together: C, Am, F and G in a loop. This is I, vi, IV, V, one of the most used patterns in pop. Am is back, and you already know how it feels next to C.",
+  tips:["Say the chord names out loud as you play: C, A minor, F, G.","Keep your left hand on the bass note with finger 5 and move your right hand as little as you can."]},
+ {id:"l2-c7",level:2,kind:"lesson",title:"Your first 7th chord: C7",key:"C",bpm:70,meter:"4/4",sections:[{name:"One note added",bars:["C","C7","C","C7"]}],
+  why:"A 7th chord is a chord with one extra note on top. C7 is C major plus B\u266d, a black key. It sounds bluesy and unfinished, as if it wants to move on. You will hear it again in Sunday Morning Walk next.",
+  tips:["Play C, then add the B\u266d on top and listen to how the mood tilts.","Say 'C seven' as you switch."]},
+ {id:"l3-m7",level:3,kind:"lesson",title:"Seventh chords: Am7 and Dm7",key:"C",bpm:70,meter:"4/4",sections:[{name:"Two warm chords",bars:["Am7","Dm7","Am7","Dm7"]}],
+  why:"Am7 is A minor with a G added on top, and Dm7 is D minor with a C added. They sound smoother and warmer than plain minor chords, and gospel and soul players use them all the time. Gospel Turnaround is built from chords like these.",
+  tips:["Notice that Am7 contains the notes of C major (C, E, G) with A underneath.","Play both slowly and listen to how soft the change sounds."]}
 ];
+const OLDORDER=["l0-c","l0-am","l0-cfg","l0-cm","let-it-be","stand-by-me","count-on-me","knockin","country-roads","brown-eyed-girl","wonderful-tonight","twist-and-shout","hallelujah","aint-no-sunshine","someone-like-you","sunday-morning","rising-sun","hit-the-road","jolene","zombie","feel-pop","feel-ballad","gospel-turnaround","amazing-grace","three-keys","hey-jude","imagine","blues12","two-five-one","circle-walk","feel-gospel","feel-waltz","feel-walking","descending-bass","gospel-lift","open-sky","walk-up","pedal-point","half-lift","sus-resolve","minor-descent","hot-cross-buns","mary-lamb","ode-to-joy","jingle-bells","twinkle"];
+const ORDER=["l0-c","l0-cfg","l0-am","l0-four","l0-cm","let-it-be","stand-by-me","count-on-me","knockin","country-roads","brown-eyed-girl","wonderful-tonight","twist-and-shout","hallelujah","aint-no-sunshine","someone-like-you","l2-c7","sunday-morning","rising-sun","hit-the-road","jolene","zombie","feel-pop","feel-ballad","amazing-grace","three-keys","hey-jude","imagine","l3-m7","gospel-turnaround","blues12","two-five-one","circle-walk","feel-gospel","feel-waltz","feel-walking","descending-bass","gospel-lift","walk-up","pedal-point","half-lift","sus-resolve","open-sky","minor-descent","hot-cross-buns","mary-lamb","ode-to-joy","jingle-bells","twinkle"];
+BUILTIN.sort((a,b)=>ORDER.indexOf(a.id)-ORDER.indexOf(b.id));
 const QDESC={'':"Major: bright and settled. Built from the root, the 3rd and the 5th.",
  'm':"Minor: darker and more emotional. The middle note is one key lower than in the major chord.",
  '7':"Dominant 7th: a major chord plus one extra bluesy note, which makes it want to move on to the next chord.",
@@ -544,7 +556,8 @@ const pad2=n=>String(n).padStart(2,"0");
 const dateKey=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
 const todayKey=()=>dateKey(new Date());
 const dayKey=off=>{const d=new Date();d.setDate(d.getDate()-off);return dateKey(d);};
-function normalize(d){return{days:(d&&d.days)||{},songs:(d&&d.songs)||{},unlock:(d&&d.unlock)||{},drills:(d&&d.drills)||{},updatedAt:(d&&d.updatedAt)||0,seen:!!(d&&d.seen),sess:(d&&d.sess)||null,sessN:(d&&d.sessN)||0,ear:(d&&d.ear&&typeof d.ear.rung==="number")?d.ear:{rung:0},dayDone:(d&&d.dayDone)||(()=>{const o={},n=(d&&d.sessN)||0;for(let i=1;i<=n;i++)o[i]="earlier";return o;})()};}
+function normalize(d){return{days:(d&&d.days)||{},songs:(d&&d.songs)||{},unlock:(d&&d.unlock)||{},drills:(d&&d.drills)||{},updatedAt:(d&&d.updatedAt)||0,seen:!!(d&&d.seen),sess:(d&&d.sess)||null,sessN:(d&&d.sessN)||0,ear:(d&&d.ear&&typeof d.ear.rung==="number")?d.ear:{rung:0},dayDone:migrateDone(d)};}
+function migrateDone(d){const o={},src=(d&&d.dayDone)||null;if(src){Object.keys(src).forEach(k=>{if(/^\d+$/.test(k)){const id=OLDORDER[+k-1];if(id)o[id]=src[k];}else o[k]=src[k];});}else{const n=(d&&d.sessN)||0;for(let i=1;i<=n&&i<=OLDORDER.length;i++)o[OLDORDER[i-1]]="earlier";}return o;}
 function loadLocal(){try{const r=localStorage.getItem(STORE_KEY);if(r)P=normalize(JSON.parse(r));}catch(e){}}
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(P));}catch(e){}}
 let cloudRef=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
@@ -883,21 +896,24 @@ const BS={n:0,mm:"maj",heard:""};
 const stageFor=s=>Math.min(3,cleanCount(s)+1);
 const byId=id=>library().find(s=>s.id===id);
 function uniqueChords(song){const seen=[];flattenBars(song).forEach(b=>{const c=b.chord.split("/")[0];if(!seen.includes(c))seen.push(c);});return seen.slice(0,4);}
-function buildChords(song){
-  const out=uniqueChords(song).slice(0,3);const add=c=>{if(out.length<4&&!out.includes(c))out.push(c);};
-  const m=out[0]&&/^([A-G][#b]?)(m?)$/.exec(out[0]);if(m)add(m[1]+(m[2]?"":"m"));
-  ["Am","F","G","Dm","Em","C"].forEach(c=>{if(out.length<3)add(c);});
+function buildChords(song,learned){
+  const out=uniqueChords(song).slice(0,4);const add=c=>{if(out.length<4&&!out.includes(c))out.push(c);};
+  (learned||[]).forEach(c=>{if(out.length<3)add(c);});
+  if(out.length<2){const m=/^([A-G][#b]?)(m?)$/.exec(out[0]||"C");if(m)add(m[1]+(m[2]?"":"m"));}
+  if(out.length<2)add("Am");
   return out;
 }
 const DAYS=()=>BUILTIN;
-const nextDay=()=>{const n=DAYS().length;for(let i=1;i<=n;i++)if(!P.dayDone[i])return i;return n;};
+const dayIsDone=d=>!!P.dayDone[DAYS()[d-1].id];
+const nextDay=()=>{const n=DAYS().length;for(let i=1;i<=n;i++)if(!dayIsDone(i))return i;return n;};
 const curDay=()=>{if(!UI.day)UI.day=nextDay();return UI.day;};
 function todayDrill(d){if(ear().rung===0)return"quality";const rot=["colour","next","prog","find"].filter(id=>!(P.drills[id]&&P.drills[id].best>=80));if(rot.length&&d%3===0)return rot[0];return"set";}
 function makePlan(d){
   const song=DAYS()[d-1],rv=d>1?DAYS()[d-2]:null;
-  return{song:song.id,revSong:rv?rv.id:null,drill:todayDrill(d),chords:buildChords(song)};
+  const learned=[];DAYS().slice(0,d-1).forEach(x=>uniqueChords(x).forEach(c=>{if(!learned.includes(c))learned.push(c);}));
+  return{song:song.id,revSong:rv?rv.id:null,drill:todayDrill(d),chords:buildChords(song,learned)};
 }
-function sessSaved(d){return P.sess&&!P.sess.done&&P.sess.dayNo===d?P.sess:null;}
+function sessSaved(d){return P.sess&&!P.sess.done&&P.sess.dayNo===d&&P.sess.song===DAYS()[d-1].id?P.sess:null;}
 function saveSess(done){P.sess={day:todayKey(),dayNo:S.dayNo,step:S.step,left:S.left,lefts:S.lefts.slice(),status:S.status,song:S.song,revSong:S.revSong,drill:S.drill,chords:S.chords,done:!!done};persist();}
 function setSong(id,stage){UI.songId=id;UI.view="song";UI.tab="learn";UI.stage=stage;UI.bar=0;UI.peek=false;UI.shift=0;UI.loop="all";const so=cur();UI.smooth=so.level>0;UI.feel=so.feel||"block";UI.melody=true;UI.mel=null;}
 function enterStep(i,left,idle){
@@ -922,7 +938,7 @@ function sessionBegin(step,fresh){
 }
 function go(i,idle){S.lefts[S.step]=S.left;enterStep(i,idle?SESS[i].len:S.lefts[i],!!idle);}
 function advance(how){S.status[S.step]=how;if(S.step<3)go(S.step+1);else{S.lefts[S.step]=S.left;finishSession();}}
-function finishSession(){stopPlay();P.sessN=(P.sessN||0)+1;P.dayDone[S.dayNo]=todayKey();saveSess(true);UI.mode="done";render();window.scrollTo({top:0});paintStreak();}
+function finishSession(){stopPlay();P.sessN=(P.sessN||0)+1;P.dayDone[S.song]=todayKey();saveSess(true);UI.mode="done";render();window.scrollTo({top:0});paintStreak();}
 function leaveSession(){stopPlay();if(UI.mode==="session")saveSess();}
 function totalLeft(){let r=S.left;for(let j=S.step+1;j<SESS.length;j++)r+=S.lefts[j];return r;}
 function paintSess(){
@@ -996,7 +1012,7 @@ function dayCard(d,sv,dn){
    '<button class="btn ghost" data-act="days">Choose another day</button></div>';
 }
 function startView(){
-  const d=curDay(),sv=sessSaved(d),dn=!!P.dayDone[d];
+  const d=curDay(),sv=sessSaved(d),dn=dayIsDone(d);
   return dayCard(d,sv,dn)+
    '<div class="card ss-row"><div><b>The basics</b><div class="hint">What a chord is, how major and minor sound, and more. 7 short lessons.</div></div><button class="btn ghost" data-act="bstart">Open basics</button></div>'+
    '<div class="row" style="justify-content:center"><button class="btn ghost small" data-act="browse">Browse songs and levels</button><button class="btn ghost small" data-act="browsebk">Backup</button></div>';
@@ -1006,7 +1022,7 @@ function daysView(){
   let lv=-1;
   DAYS().forEach((so,i)=>{const d=i+1;
     if(so.level!==lv){if(lv>=0)h+='</ul></div>';lv=so.level;h+='<div class="card stack"><span class="label">'+esc(levelName(lv))+'</span><ul class="ss-plan">';}
-    const st=P.dayDone[d]?"✓ Done":d===nx?"Up next":"";
+    const st=dayIsDone(d)?"✓ Done":d===nx?"Up next":"";
     h+='<li><button class="ss-li" data-act="pickday" data-d="'+d+'"><span class="m">'+d+'</span><span><b>'+esc(so.title)+'</b><span class="hint">'+(d===cur?"Selected":st)+'</span></span></button></li>';});
   return h+'</ul></div>';
 }
