@@ -561,11 +561,13 @@ function migrateDone(d){const o={},src=(d&&d.dayDone)||null;if(src){Object.keys(
 function loadLocal(){try{const r=localStorage.getItem(STORE_KEY);if(r)P=normalize(JSON.parse(r));}catch(e){}}
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(P));}catch(e){}}
 let cloudRef=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
-function persist(){P.updatedAt=Date.now();saveLocal();if(cloudRef){clearTimeout(cloudTimer);cloudTimer=setTimeout(pushCloud,2500);}}
+function persist(){P.updatedAt=Date.now();saveLocal();if(cloudRef){clearTimeout(cloudTimer);cloudTimer=setTimeout(pushCloud,2500);}if(SYNC.code){clearTimeout(SYNC.t);SYNC.t=setTimeout(()=>syncNow(true),2500);}}
 async function pushCloud(){if(!cloudRef)return;if(cloudBusy){cloudDirty=true;return;}cloudBusy=true;try{await cloudRef.set(JSON.parse(JSON.stringify(P)));}catch(e){}cloudBusy=false;if(cloudDirty){cloudDirty=false;pushCloud();}}
 function hasProgress(){return Object.keys(P.days).length||Object.keys(P.songs).length||Object.keys(P.unlock).length||Object.keys(P.drills).length;}
 function validSong(s){try{if(!s||typeof s.id!=="string"||typeof s.title!=="string"||typeof s.level!=="number"||typeof s.key!=="string"||!Array.isArray(s.sections)||!s.sections.length)return false;keyInfo(s.key);if(!(s.bpm>20&&s.bpm<240))return false;let n=0;s.sections.forEach(sec=>{if(!Array.isArray(sec.bars)||!sec.bars.length||sec.bars.length>64)throw 0;sec.bars.forEach(parseChord);n+=sec.bars.length;});if(s.melody){if(!Array.isArray(s.melody)||s.melody.length!==n)delete s.melody;else s.melody.forEach(parseMelodyBar);}return true;}catch(e){return false;}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&SYNC.code&&UI.mode!=='session')syncNow(true);});
 async function initCloud(){
+  if(SYNC.code)syncNow(true);
   if(!window.claude||!window.claude.use)return;
   try{
     const db=await window.claude.use("db");const user=await window.claude.use("user");
@@ -701,8 +703,50 @@ function render(){setTimeout(sticky,50);
   if(m==="session"&&!S.overlay&&(S.step===2||(S.step===3&&S.sub==="a")))paintLive();
   kbScroll();
 }
+
+/* ---------- cross-device sync (Supabase, secret-code based) ---------- */
+const SB_URL="https://qyonxlrzsijcradpmwud.supabase.co",SB_KEY="sb_publishable_TKvPB_lSSL6mSTGOGFXIzw_RDw7JZB-";
+const SYNC={code:(()=>{try{return localStorage.getItem("pbe.sync")||"";}catch(e){return"";}})(),t:0,busy:false,msg:""};
+const sbRpc=async(fn,body)=>{const r=await fetch(SB_URL+"/rest/v1/rpc/"+fn,{method:"POST",headers:{"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});if(!r.ok)throw new Error("sync "+r.status);const t=await r.text();return t?JSON.parse(t):null;};
+function genCode(){const a=new Uint8Array(16);crypto.getRandomValues(a);const al="abcdefghjkmnpqrstuvwxyz23456789";let c="";a.forEach(v=>{c+=al[v%al.length];});return c.match(/.{4}/g).join("-");}
+const cleanCode=c=>String(c||"").toLowerCase().replace(/[^a-z0-9]/g,"").match(/.{1,4}/g);
+function mergeP(a,b){
+  const A_=normalize(a),B_=normalize(b),n=A_.updatedAt>=B_.updatedAt?A_:B_,o=n===A_?B_:A_;
+  const m=normalize(n);
+  Object.keys(o.days).forEach(k=>{m.days[k]=Math.max(m.days[k]||0,o.days[k]||0);});
+  ["songs","unlock","drills"].forEach(f=>{Object.keys(o[f]).forEach(k=>{if(!(k in m[f]))m[f][k]=o[f][k];});});
+  Object.keys(o.dayDone).forEach(k=>{if(!m.dayDone[k])m.dayDone[k]=o.dayDone[k];});
+  m.sessN=Math.max(n.sessN,o.sessN);m.seen=n.seen||o.seen;m.updatedAt=Math.max(A_.updatedAt,B_.updatedAt);
+  return m;
+}
+async function syncNow(quiet){
+  if(!SYNC.code||SYNC.busy)return;SYNC.busy=true;
+  try{
+    const remote=await sbRpc("pbe_pull",{p_code:SYNC.code});
+    const m=remote?mergeP(P,remote):P;
+    const changed=remote&&JSON.stringify(m)!==JSON.stringify(P);
+    if(changed){P=m;saveLocal();}
+    await sbRpc("pbe_push",{p_code:SYNC.code,p_data:JSON.parse(JSON.stringify(P))});
+    SYNC.msg="Synced just now.";
+    if(changed&&UI.mode!=="session"){render();}
+  }catch(e){SYNC.msg="Could not sync. Check your connection and try again.";}
+  SYNC.busy=false;const el=$("#smsg");if(el)el.textContent=SYNC.msg;
+}
+function syncOn(code){SYNC.code=code;try{localStorage.setItem("pbe.sync",code);}catch(e){}}
+async function syncStart(){syncOn(genCode());SYNC.msg="Syncing...";UI.bopen=true;render();await syncNow();render();}
+async function syncLink(){
+  const parts=cleanCode($("#scin").value);const code=parts?parts.join("-"):"";
+  if(code.replace(/-/g,"").length!==16){$("#smsg").textContent="That code should be 16 letters and numbers.";return;}
+  try{const r=await sbRpc("pbe_pull",{p_code:code});if(!r){$("#smsg").textContent="No progress found for that code. Check it and try again.";return;}}catch(e){$("#smsg").textContent="Could not reach sync. Try again.";return;}
+  syncOn(code);UI.bopen=true;SYNC.msg="Linked. Syncing...";await syncNow();UI.day=0;render();
+}
+function syncOff(){SYNC.code="";try{localStorage.removeItem("pbe.sync");}catch(e){}SYNC.msg="";UI.bopen=true;render();}
+function syncPanel(){
+  if(SYNC.code)return '<p class="hint">Sync is on. Your progress follows you between devices. To link another device, open this panel there and enter this code.</p><div class="row"><b class="mono" style="font-size:18px;letter-spacing:.04em">'+esc(SYNC.code)+'</b></div><div class="row"><button class="btn small" data-act="ssync">Sync now</button><button class="btn ghost small" data-act="soff">Turn off on this device</button></div><span class="hint" id="smsg" role="status">'+esc(SYNC.msg)+'</span><p class="hint">Keep this code private. Anyone who has it can see and change your progress.</p>';
+  return '<p class="hint">Use the same progress on your laptop and iPad. Turn sync on here to get a code, then enter that code on your other device.</p><div class="row"><button class="btn small" data-act="son">Turn on sync</button></div><label class="field">Already have a code?<input id="scin" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"></label><div class="row"><button class="btn ghost small" data-act="slink">Link this device</button></div><span class="hint" id="smsg" role="status">'+esc(SYNC.msg)+'</span>';
+}
 function backupPanel(){
-  return '<details class="card" id="backup"'+(UI.bnote||UI.bopen?" open":"")+'><summary>Backup and restore progress</summary><div class="stack" style="margin-top:12px"><p class="hint">Your progress is saved on this device. Copy a backup to keep it safe or to move it to another device, then paste it into Restore on the other one.</p>'+
+  return '<details class="card" id="backup"'+(UI.bnote||UI.bopen?" open":"")+'><summary>Sync, backup and restore</summary><div class="stack" style="margin-top:12px"><span class="label">Sync between devices</span>'+syncPanel()+'<span class="label">Backup</span><p class="hint">Your progress is saved on this device. Copy a backup to keep it safe or to move it to another device, then paste it into Restore on the other one.</p>'+
    '<div class="row"><button class="btn small" data-act="bcopy">Copy backup</button></div><textarea id="bout" rows="3" readonly aria-label="Backup text" placeholder="Your backup appears here"></textarea>'+
    '<label class="field">Restore from a backup<textarea id="bin" rows="3" placeholder="Paste a backup here"></textarea></label>'+
    '<div class="row"><button class="btn ghost small" data-act="brestore" id="brbtn">Restore</button><span class="hint" id="bmsg" role="status">'+esc(UI.bnote||"")+'</span></div></div></details>';
@@ -1015,7 +1059,7 @@ function startView(){
   const d=curDay(),sv=sessSaved(d),dn=dayIsDone(d);
   return dayCard(d,sv,dn)+
    '<div class="card ss-row"><div><b>The basics</b><div class="hint">What a chord is, how major and minor sound, and more. 7 short lessons.</div></div><button class="btn ghost" data-act="bstart">Open basics</button></div>'+
-   '<div class="row" style="justify-content:center"><button class="btn ghost small" data-act="browse">Browse songs and levels</button><button class="btn ghost small" data-act="browsebk">Backup</button></div>';
+   '<div class="row" style="justify-content:center"><button class="btn ghost small" data-act="browse">Browse songs and levels</button><button class="btn ghost small" data-act="browsebk">Sync and backup</button></div>';
 }
 const DLV={"aint-no-sunshine":1,"minor-descent":2,"l2-c7":2,"l3-m7":3};
 function daysView(){
@@ -1164,6 +1208,10 @@ document.addEventListener("click",e=>{
     case"tostart":leaveSession();UI.mode="start";render();window.scrollTo({top:0});break;
     case"browse":leaveSession();UI.mode="browse";UI.tab="learn";UI.view="home";render();window.scrollTo({top:0});break;
     case"browsebk":leaveSession();UI.mode="browse";UI.tab="learn";UI.view="home";UI.bopen=true;render();setTimeout(()=>{const b=$("#backup");if(b)b.scrollIntoView();},50);break;
+    case"son":syncStart();break;
+    case"slink":syncLink();break;
+    case"ssync":SYNC.msg="Syncing...";$("#smsg").textContent=SYNC.msg;syncNow().then(()=>render());break;
+    case"soff":syncOff();break;
     case"bcopy":copyBackup();break;
     case"brestore":restoreBackup();break;
     case"dmode":stopPlay();D.mode=t.dataset.id;D.active=false;D.summary=null;render();break;
