@@ -1033,7 +1033,7 @@ function welcomeView(){
 
 /* start and done */
 function streakNow(){let n=0;const ok=k=>(P.days[k]||0)>=1200;let off=ok(dayKey(0))?0:1;while(ok(dayKey(off))){n++;off++;}return n;}
-function chordNotes(name){const c=parseChord(name),nm=keyUsesFlats(c.root,minorish(c.q))?FLAT:SHARP,rn=nm[c.root];return rn+(c.q==="maj7"?"maj7":c.q)+" = "+spellChord(rn,c.q,c.root).map(x=>x.name).join(" ");}
+function chordNotesN(name){const c=parseChord(name),nm=keyUsesFlats(c.root,minorish(c.q))?FLAT:SHARP,rn=nm[c.root];return rn+(c.q==="maj7"?"maj7":c.q)+" = "+spellChord(rn,c.q,c.root).map(x=>x.name).join(" ");}
 const levelName=n=>{const l=LEVELS.find(x=>x.n===n);return l?l.name:"Level "+n;};
 function learnList(p){
   const song=byId(p.song),rv=p.revSong?byId(p.revSong):null,ch=p.chords;
@@ -1050,7 +1050,7 @@ function dayCard(d,sv,dn){
   return '<div class="card stack"><div class="ss-titlebar"><span class="label">Day '+d+' of '+DAYS().length+' · '+esc(levelName(song.level))+(dn?' · done ✓':'')+'</span><span class="row">'+(d>1?'<button class="btn ghost small" data-act="pday" data-d="'+(d-1)+'">\u2190 Day '+(d-1)+'</button>':'')+(d<DAYS().length?'<button class="btn ghost small" data-act="pday" data-d="'+(d+1)+'">Day '+(d+1)+' \u2192</button>':'')+'</span></div>'+
    '<h2 style="margin:0">'+esc(song.title)+'</h2>'+
    '<div><span class="label">What you will learn today</span><p class="ss-big" style="margin-top:6px">'+esc(song.why)+'</p></div>'+
-   '<div><span class="label">Chords today</span><ul class="ss-chords">'+p.chords.map(c=>'<li>'+esc(chordNotes(c))+'</li>').join("")+'</ul></div>'+
+   '<div><span class="label">Chords today</span><ul class="ss-chords">'+p.chords.map(c=>'<li>'+esc(chordNotesN(c))+'</li>').join("")+'</ul></div>'+
    '<span class="label">Today\'s steps · 30 minutes</span><p class="hint">Tap a step to jump straight to it.</p><ul class="ss-plan">'+rows.map((x,k)=>'<li><button class="ss-li" data-act="sstart" data-step="'+k+'"><span class="m">'+x[0]+'</span><span><b>'+esc(x[1])+'</b><span class="hint">'+esc(x[2])+esc(stt(k))+'</span></span></button></li>').join("")+'</ul>'+
    '<div class="ss-btns"><button class="btn big" data-act="sstart">'+(sv?'Resume Day '+d+' (step '+(sv.step+1)+' of 4)':dn?'Practise Day '+d+' again':'Start Day '+d)+'</button>'+(sv?'<button class="btn ghost big" data-act="sstart" data-fresh="1">Start from the beginning</button>':'')+'</div>'+
    '<button class="btn ghost" data-act="days">Choose another day</button></div>';
@@ -1085,7 +1085,7 @@ function doneView(){
   return '<div class="stack ss-win"><div class="ss-badge" aria-hidden="true">✓</div><h2>Day '+day+' complete</h2><p class="ss-big">Well done. You showed up and put in the work.</p></div>'+
    '<div class="card stack"><span class="label">What you learnt today</span><p class="ss-big">'+esc(song.why)+'</p>'+
    (did.length?'<ul class="ss-chords">'+did.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p class="hint">You skipped every step today.</p>')+
-   '<span class="label">Chords you can now build</span><ul class="ss-chords">'+p.chords.map(c=>'<li>'+esc(chordNotes(c))+'</li>').join("")+'</ul></div>'+
+   '<span class="label">Chords you can now build</span><ul class="ss-chords">'+p.chords.map(c=>'<li>'+esc(chordNotesN(c))+'</li>').join("")+'</ul></div>'+
    '<div class="card stack"><span class="label">Today in numbers</span><div class="ss-stats">'+stat(mins+" min","practised today")+stat(done+" of 4","steps completed")+stat(sg+(sg===1?" day":" days"),"streak")+(sc?stat(sc,"in the ear drill"):"")+'</div>'+
    (mins<20?'<p class="hint">A day counts toward your streak at 20 minutes or more.</p>':'')+'</div>'+
    '<div class="ss-btns">'+(last?'<button class="btn big" data-act="tostart">Back to start</button>':'<button class="btn big" data-act="nextday">Move on to Day '+(day+1)+'</button>')+'<button class="btn ghost big" data-act="days">Choose another day</button></div>'+
