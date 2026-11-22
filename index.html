@@ -1119,7 +1119,7 @@ function buildStep(){
   const label=rootName+(c.q==="maj7"?"maj7":c.q),roles=ROLES[c.q]||[];
   const lastChord=i>=cs.length-1;
   const head='<div class="ss-titlebar"><span class="label">Chord '+(i+1)+' of '+cs.length+'</span><span class="pill">'+esc(formula(c.q))+'</span></div>';
-  const nextBtn=lastChord?'':'<button class="btn" data-act="bnextch">Next chord</button>';
+  const nextBtn=(i>0?'<button class="btn ghost" data-act="bprevch">Previous chord</button>':'')+(lastChord?'':'<button class="btn" data-act="bnextch">Next chord</button>');
   const lastNote=lastChord?'<p class="hint">That was the last chord for today. Press Next below.</p>':'';
   if(!learn){
     const boxes=sp.map(()=>'<span class="note empty">?</span>').join("");
@@ -1204,6 +1204,7 @@ document.addEventListener("click",e=>{
     case"bshow":S.b.show=!S.b.show;render();break;
     case"bchord":{const c=parseChord(S.chords[Math.min(S.b.i,S.chords.length-1)]);const cx=audio();if(cx){stopPlay();playV(c.root,c.q,cx.currentTime+0.06,2);}break;}
     case"bnextch":S.b.i++;S.b.show=true;render();break;
+    case"bprevch":S.b.i=Math.max(0,Math.min(S.b.i,S.chords.length-1)-1);S.b.show=true;stopPlay();render();break;
     case"rsub":S.sub=t.dataset.v;stopPlay();if(S.sub==="b"){D.mode="find";D.active=false;D.summary=null;}else setSong(S.revSong||S.song,3);render();break;
     case"tostart":leaveSession();UI.mode="start";render();window.scrollTo({top:0});break;
     case"browse":leaveSession();UI.mode="browse";UI.tab="learn";UI.view="home";render();window.scrollTo({top:0});break;
